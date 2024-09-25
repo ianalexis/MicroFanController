@@ -1,5 +1,6 @@
 #include <Arduino.h>
- // Pines de conexion
+
+// Pines de conexion
 static const int pinPWM = 9;
 static const int pinSensor = 2;
 static const int pinTermistor = A0;
@@ -27,15 +28,25 @@ struct TempPWM {
 
 // Matriz de temperatura y porcentaje de PWM (constante)
 const TempPWM tempPWMArray[] = {
-    {40, pwmOff},
+    {40, 1},
     {65, 25},
     {77, 50},
     {85, 75},
-    {90, pwmMax}
+    {90, 100}
 };
 
 // Número de elementos en la matriz
 const int cantElementosArray = sizeof(tempPWMArray) / sizeof(tempPWMArray[0]);
+
+// Prototipos de función
+void setmins();
+void setPWMMin();
+void setTempMin();
+int pwmDeArranque();
+void setVelocidadPWM(int velocidad);
+bool sensorEnMovimiento();
+int temperaturaTermistor();
+int calcularPWM(int temperatura);
 
 void setup() {
   Serial.begin(9600);
