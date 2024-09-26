@@ -13,6 +13,7 @@ static const int tiempoDeMuestreo = 5000; // Tiempo de espera en milisegundos en
 static const int pwmOff = 1; // Valor de PWM para apagar el motor.
 int pwmMin = 10; // Valor minimo de PWM (se setea en setPWMMin()).
 int tempMin = 20; // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()).
+bool tacometro = true; // Variable para saber si el tacometro esta funcionando.
 
 // Variables de Termistor
 const float tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
@@ -38,7 +39,7 @@ struct TempPWM {
 
  const TempPWM tempPWMArray[] = {
   {20, 30},
-  {35, 35},
+  {25, 35},
   {60, 50},
   {70, 65},
   {80, 90},
@@ -60,6 +61,7 @@ void setVelocidadPWM(int velocidad);
 bool enMovimiento();
 int temperaturaTermistor();
 int calcularPWM(int temperatura);
+int velocidadActual();
 
 void setup() {
   Serial.println("Iniciando sistema...");
@@ -83,6 +85,7 @@ void setmins() {
 void setPWMMin() {
   Serial.println("Seteando PWM minimo...");
   pwmMin = pwmDeArranque();
+  tacometro = pwmMin > 0;
   if (pwmMin == 0) {
     Serial.println("Error: No se detecto movimiento en el tacometro, se setea el PWM minimo en un " + String(porcentajeSinTacometro) + "%");
     pwmMin = porcentajeSinTacometro;
@@ -132,6 +135,9 @@ void loop() {
     setVelocidadPWM(pwm); // Setea el valor de PWM.
     delay(tiempoDeMuestreo); // Espera para volver a leer la temperatura.
   }
+  if (tacometro) {
+    velocidadActual(); // Muestra la velocidad actual del motor.
+  }
 }
 
 // Calcula el valor de PWM basado en la temperatura utilizando interpolación lineal
@@ -158,23 +164,17 @@ int calcularPWM(int temperatura) {
   return 0; // Valor por defecto en caso de error
 }
 
-// Devuelve si el sensor detecto 10 pasadas por 0.5 segundo.
-bool enMovimiento() { //TODO: REVISAR COMO SE LEE LA INFO DEL TACOMETRO.
+// Devuelve si detecta movimiento en el tacometro.
+bool enMovimiento() {
   Serial.println("Detectando movimiento...");
- //int contadorSeñales = 0;
- //unsigned long tiempoInicio = millis();
- //while (millis() - tiempoInicio < 500) {
- //  if (digitalRead(pinTacometro
- //) == HIGH) {
- //    contadorSeñales++;
- //    // Esperar a que la señal baje para evitar contar múltiples veces la misma señal
- //    while (digitalRead(pinTacometro
- //  ) == HIGH);
- //  }
- //}
- //Serial.println("Cantidad de señales detectadas en 0.5 segundos: " + String(contadorSeñales));
- //return contadorSeñales >= 10;
- return false;
+  return velocidadActual() > 0;
+}
+
+// Devuelve la velocidad actual del motor en RPM.
+int velocidadActual(){
+
+  Serial.println("Velocidad: " + String(velocidad) + " RPM");
+  return velocidad;
 }
 
 // Devuelve la temperatura del termistor.
@@ -193,6 +193,6 @@ int temperaturaTermistor() {
 
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-  Serial.println("Velocidad: " + String(velocidad) + "%");
+  //Serial.println("Velocidad: " + String(velocidad) + "%");
   analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
 }
