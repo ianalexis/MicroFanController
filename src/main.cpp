@@ -1,15 +1,15 @@
 #include <Arduino.h>
 
 // Pines de conexion
-static const int pinPWM = 9;
-static const int pinSensor = 2;
+static const int pinPWM = D1;
+static const int pinTacometro = D2;
 static const int pinTermistor = A0;
 
 // Variables globales
 static const int pwmMax = 100; // Valor maximo de PWM
-static const int sensorlessMinPorcentaje = 35; // Porcentaje de la velocidad minima para el caso de no tener sensor.
+static const int porcentajeSinTacometro = 35; // Porcentaje de la velocidad minima para el caso de no tener sensor.
 static const int temperaturaMaximaEmergencia = 90; // Temperatura maxima de emergencia.
-static const int tiempoDeMuestreo = 500; // Tiempo de espera en milisegundos entre lecturas de temperatura.
+static const int tiempoDeMuestreo = 5000; // Tiempo de espera en milisegundos entre lecturas de temperatura.
 static const int pwmOff = 1; // Valor de PWM para apagar el motor.
 int pwmMin = 10; // Valor minimo de PWM (se setea en setPWMMin()).
 int tempMin = 20; // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()).
@@ -27,36 +27,51 @@ struct TempPWM {
 };
 
 // Matriz de temperatura y porcentaje de PWM (constante)
-const TempPWM tempPWMArray[] = {
-    {40, 1},
-    {65, 25},
-    {77, 50},
-    {85, 75},
-    {90, 100}
-};
+// const TempPWM tempPWMArray[] = {
+//  {35, 1},
+//  {40, 35},
+//  {65, 50},
+//  {75, 65},
+//  {80, 90},
+//  {90, 100}
+//};
+
+ const TempPWM tempPWMArray[] = {
+  {20, 30},
+  {35, 35},
+  {60, 50},
+  {70, 65},
+  {80, 90},
+  {90, 100}
+}; // Tabla de prueba TODO: Borrar
+
 
 // Número de elementos en la matriz
 const int cantElementosArray = sizeof(tempPWMArray) / sizeof(tempPWMArray[0]);
 
 // Prototipos de función
+void setup();
+void loop();
 void setmins();
 void setPWMMin();
 void setTempMin();
 int pwmDeArranque();
 void setVelocidadPWM(int velocidad);
-bool sensorEnMovimiento();
+bool enMovimiento();
 int temperaturaTermistor();
 int calcularPWM(int temperatura);
 
 void setup() {
+  Serial.println("Iniciando sistema...");
   Serial.begin(9600);
+  Serial.println("Configurando pines...");
   pinMode(LED_BUILTIN, OUTPUT); // Setea el pin del LED incorporado como salida.
-  digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED incorporado.
   pinMode(pinPWM, OUTPUT); // Setea el pin 9 como salida.
-  pinMode(pinSensor, INPUT); // Setea el pin 2 como entrada.
+  pinMode(pinTacometro, INPUT); // Setea el pin como entrada.
+  analogWriteFreq(25000); // Setea la frecuencia de PWM a 25kHz.
   setmins(); // Setea el valor de PWM minimo y la temperatura minima.
-  digitalWrite(LED_BUILTIN, LOW); // Apaga el LED incorporado.
-}
+  Serial.println("Sistema iniciado correctamente.");
+  }
 
 void setmins() {
   Serial.println("Seteando valores minimos...");
@@ -66,35 +81,39 @@ void setmins() {
 
 // Setea el valor de pwmMin con el valor de la velocidad minima del sensor y en caso de no existir o no funcionar el sensor, se setea en un 75% de la velocidad PWM.
 void setPWMMin() {
+  Serial.println("Seteando PWM minimo...");
   pwmMin = pwmDeArranque();
   if (pwmMin == 0) {
-    Serial.println("Error: No se detecto movimiento en el sensor, se setea el PWM minimo en un " + String(sensorlessMinPorcentaje) + "%");
-    pwmMin = sensorlessMinPorcentaje;
+    Serial.println("Error: No se detecto movimiento en el tacometro, se setea el PWM minimo en un " + String(porcentajeSinTacometro) + "%");
+    pwmMin = porcentajeSinTacometro;
   }
 }
 
 // Setea el valor de tempMin con el valor de PWM minimo en base a la tabla de temperaturas y PWM para evitar enviar un PWM menor al minimo.
 void setTempMin() {
+  Serial.println("Seteando temperatura minima...");
   tempMin = tempPWMArray[0].temperatura; // Setea el valor de tempMin con el valor de la primera temperatura de la tabla.
-  for (int i = pwmMin; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
-    if (tempPWMArray[i].porcentajePWM >= (pwmMin * 100) / pwmMax) { // Si el porcentaje de PWM es mayor o igual al porcentaje minimo.
+  for (int i = 0; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
+    if (tempPWMArray[i].porcentajePWM >= pwmMin) { // Si el porcentaje de PWM es mayor o igual al porcentaje minimo.
       Serial.println("Temperatura minima: " + String(tempPWMArray[i].temperatura) + "°C");
       tempMin = tempPWMArray[i].temperatura; // Setea el valor de tempMin con la temperatura de la tabla.
-      break;
+      return;
     }
   }
+  tempMin = 10;
+  Serial.println("Temperatura minima no encontrada en la tabla, se setea en " + String(tempMin) + "°C");
 }
 
 // Devuelve la velocidad minima en PWM recorriendo el rango PWM hasta detectar movimiento. Devuelve un 10% mas de la velocidad detectada y si no detecta movimiento, devuelve 0.
 int pwmDeArranque() {
-  for (int i = 10; i < sensorlessMinPorcentaje; i++) { // Recorre el rango de PWM de 0 a el maximo.
+  for (int i = pwmMin; i < porcentajeSinTacometro; i++) { // Recorre el rango de PWM de 0 a el maximo.
     setVelocidadPWM(i); // Setea el valor de PWM.
-    if (sensorEnMovimiento()) {
+    if (enMovimiento()) {
       Serial.println("Velocidad minima detectada: " + String(i + 2) + "%");
       return static_cast < int > (i + 2);
     }
   }
-  Serial.println("Error: No se detecto movimiento en el sensor.");
+  Serial.println("Error: No se detecto movimiento en el tacometro.");
   return 0;
 }
 
@@ -118,7 +137,7 @@ void loop() {
 // Calcula el valor de PWM basado en la temperatura utilizando interpolación lineal
 int calcularPWM(int temperatura) {
   if (temperatura < tempMin) { // Si la temperatura es menor a la temperatura minima, devuelve el PWM minimo.
-    Serial.println("Temperatura menor a la minima. Apagando motor.");
+    Serial.println("Temperatura menor a la minima, apagando motor.");
     return pwmOff; // Apaga el motor si la temperatura es menor a la minima.
   }
   if (temperatura >= tempPWMArray[cantElementosArray - 1].temperatura) {
@@ -140,18 +159,22 @@ int calcularPWM(int temperatura) {
 }
 
 // Devuelve si el sensor detecto 10 pasadas por 0.5 segundo.
-bool sensorEnMovimiento() {
-  int contadorSeñales = 0;
-  unsigned long tiempoInicio = millis();
-  while (millis() - tiempoInicio < 500) {
-    if (digitalRead(pinSensor) == HIGH) {
-      contadorSeñales++;
-      // Esperar a que la señal baje para evitar contar múltiples veces la misma señal
-      while (digitalRead(pinSensor) == HIGH);
-    }
-  }
-  Serial.println("Cantidad de señales detectadas en 0.5 segundos: " + String(contadorSeñales));
-  return contadorSeñales >= 10;
+bool enMovimiento() { //TODO: REVISAR COMO SE LEE LA INFO DEL TACOMETRO.
+  Serial.println("Detectando movimiento...");
+ //int contadorSeñales = 0;
+ //unsigned long tiempoInicio = millis();
+ //while (millis() - tiempoInicio < 500) {
+ //  if (digitalRead(pinTacometro
+ //) == HIGH) {
+ //    contadorSeñales++;
+ //    // Esperar a que la señal baje para evitar contar múltiples veces la misma señal
+ //    while (digitalRead(pinTacometro
+ //  ) == HIGH);
+ //  }
+ //}
+ //Serial.println("Cantidad de señales detectadas en 0.5 segundos: " + String(contadorSeñales));
+ //return contadorSeñales >= 10;
+ return false;
 }
 
 // Devuelve la temperatura del termistor.
@@ -162,14 +185,14 @@ int temperaturaTermistor() {
     return 0; // Valor por defecto en caso de error.
   }
   float R = tR1 * (1023.0 / lectura - 1.0); // Resistencia del termistor.
-  Serial.println("Resistencia: " + String(R) + " ohms");
+  //Serial.println("Resistencia: " + String(R) + " ohms");
   float T = 1.0 / (1.0 / tT0 + log(R / tR0) / tBeta); // Temperatura en Kelvin.
   Serial.println("Temperatura: " + String(T - 273.15) + "°C");
   return T - 273.15; // Temperatura en Celsius.
 }
 
 // Setea la velocidad del motor en PWM.
-void setVelocidadPWM(int velocidad) {
-  Serial.print("Velocidad: " + String(velocidad) + "%");
-  analogWrite(9, map(velocidad, 0, 100, 0, 255));
+void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
+  Serial.println("Velocidad: " + String(velocidad) + "%");
+  analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
 }
