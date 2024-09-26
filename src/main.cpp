@@ -171,7 +171,7 @@ bool enMovimiento() {
 }
 
 // Devuelve la velocidad actual del motor en RPM.
-int velocidadActual(){
+int velocidadActual() {
   unsigned long tiempo = 1000; // Tiempo de espera en milisegundos para calcular la velocidad.
   int pulsos = 0; // Cantidad de pulsos detectados.
   unsigned long tiempoInicial = millis(); // Tiempo inicial.
@@ -180,6 +180,7 @@ int velocidadActual(){
       pulsos++; // Incrementa la cantidad de pulsos.
       while (digitalRead(pinTacometro) == HIGH) {} // Espera a que el pulso termine.
     }
+    delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
   }  
   int velocidad = pulsos * 60 / 2; // Calcula la velocidad en RPM.
   Serial.println("Velocidad: " + String(velocidad) + " RPM");
