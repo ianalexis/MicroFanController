@@ -1,0 +1,32 @@
+# EditorConfig ayuda a mantener estilos de codificación consistentes entre diferentes editores e IDEs.
+root = true
+
+# Configuración general
+[*]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Configuración específica para archivos C/C++
+[*.{c,h,cpp,hpp}]
+indent_style = tab
+indent_size = 4
+tab_width = 4
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true
+
+# Reglas específicas para JSON
+[*.json]
+indent_style = space
+indent_size = 2
+tab_width = 2
+end_of_line = lf
+charset = utf-8
+trim_trailing_whitespace = true
+insert_final_newline = true

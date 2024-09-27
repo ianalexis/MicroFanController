@@ -200,7 +200,7 @@ int velocidadActual() {
 	int pulsos = 0;							// Cantidad de pulsos detectados.
 	unsigned long tiempoInicial = millis(); // Tiempo inicial.
 	while (millis() - tiempoInicial < tiempo) { // Mientras no se cumpla el tiempo de espera.
-		if (digitalRead(pinTacometro) == HIGH) {			  // Si detecta un pulso.
+		if (digitalRead(pinTacometro) == HIGH) {	// Si detecta un pulso.
 			pulsos++; // Incrementa la cantidad de pulsos.
 			while (digitalRead(pinTacometro) == HIGH) {
 			} // Espera a que el pulso termine.
