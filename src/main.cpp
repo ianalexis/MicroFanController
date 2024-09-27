@@ -24,12 +24,12 @@ int pwm = 0;							  // Valor de PWM actual.
 // TODO: Valor de diferencia +/- para cambio de velocidad.
 
 // Variables de Termistor
-const float tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
-const float tR0 = 100000; // Valor de resistencia a 25 grados Celsius.
-const float tT0 = 298.15; // Temperatura de referencia en Kelvin.
-const float tR1 = 10000;  // Resistencia en serie (10K ohms). De referencia para el divisor de voltaje.
+const int tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
+const int tR0 = 100000; // Valor de resistencia a 25 grados Celsius.
+const int tT0 = 298.15; // Temperatura de referencia en Kelvin.
+const int tR1 = 10000;  // Resistencia en serie (10K ohms). De referencia para el divisor de voltaje.
 const int kelvin = 273.15; // Valor de Kelvin para convertir a Celsius.
-float lecturaTermistor = 0; // Lectura del termistor.
+int lecturaTermistor = 0; // Lectura del termistor.
 
 //Variables Tacometro
 int velocidad = 0; // Velocidad actual del motor en RPM.
