@@ -98,7 +98,9 @@ void setPWMMin() {
   pwmMin = pwmDeArranque();
   tacometro = pwmMin > 0; // Si el PWM minimo es mayor a 0, el tacometro esta funcionando.
   if (!tacometro) {
-    Serial.println("Error: No se detecto movimiento en el tacometro, se setea el PWM minimo en un " + String(pwmMinSinTacometro) + "%");
+    Serial.print("Error: No se detecto movimiento en el tacometro, se setea el PWM minimo en un ");
+    Serial.print(pwmMinSinTacometro);
+    Serial.println("%");
     pwmMin = pwmMinSinTacometro;
   }
 }
@@ -109,13 +111,17 @@ void setTempMin() {
   tempMin = tempPWMArray[0].temperatura; // Setea el valor de tempMin con el valor de la primera temperatura de la tabla.
   for (int i = 0; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
     if (tempPWMArray[i].porcentajePWM >= pwmMin) { // Si el porcentaje de PWM es mayor o igual al porcentaje minimo.
-      Serial.println("Temperatura minima: " + String(tempPWMArray[i].temperatura) + "°C");
+      Serial.print("Temperatura minima: ");
+      Serial.print(tempPWMArray[i].temperatura);
+      Serial.println("°C");
       tempMin = tempPWMArray[i].temperatura; // Setea el valor de tempMin con la temperatura de la tabla.
       return;
     }
   }
   tempMin = 10;
-  Serial.println("Error en Tabla: Temperatura minima no encontrada en la tabla, se setea en " + String(tempMin) + "°C");
+  Serial.print("Error en Tabla: Temperatura minima no encontrada en la tabla, se setea en ");
+  Serial.print(tempMin);
+  Serial.println("°C");
 }
 
 // Devuelve la velocidad minima en PWM recorriendo el rango PWM hasta detectar movimiento. Devuelve un 10% mas de la velocidad detectada y si no detecta movimiento, devuelve 0.
@@ -123,7 +129,9 @@ int pwmDeArranque() {
   for (int i = pwmMin; i < pwmMinSinTacometro; i++) { // Recorre el rango de PWM de 0 a el maximo.
     setVelocidadPWM(i); // Setea el valor de PWM.
     if (enMovimiento()) {
-      Serial.println("Velocidad minima detectada: " + String(i + 2) + "%");
+      Serial.print("Velocidad minima detectada: ");
+      Serial.print(i + 2);
+      Serial.println("%");
       return static_cast < int > (i + 2);
     }
   }
@@ -152,16 +160,21 @@ int calcularPWM(int temperatura) {
     Serial.println("Temperatura mayor a la maxima. Encendiendo motor al maximo.");
     return pwmMax; // Enciende el motor al maximo si la temperatura es mayor a la maxima.
   }
+
+  // Interpolación lineal
   for (int i = 0; i < cantElementosArray - 1; i++) {
     if (temperatura >= tempPWMArray[i].temperatura && temperatura <= tempPWMArray[i + 1].temperatura) {
       int tempDiff = tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura;
       int pwmDiff = tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM;
       int tempOffset = temperatura - tempPWMArray[i].temperatura;
       int porcentajePWM = tempPWMArray[i].porcentajePWM + (pwmDiff * tempOffset) / tempDiff;
-      Serial.println("Porcentaje de PWM: " + String(porcentajePWM) + "%");
+      Serial.print("Porcentaje de PWM: ");
+      Serial.print(porcentajePWM);
+      Serial.println("%");
       return porcentajePWM;
     }
   }
+
   Serial.println("Error: No se encontro el valor de PWM para la temperatura.");
   return 0; // Valor por defecto en caso de error
 }
@@ -196,7 +209,9 @@ int velocidadActual() {
     delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
   }  
   int velocidad = pulsos * 60 / 2; // Calcula la velocidad en RPM.
-  Serial.println("Velocidad: " + String(velocidad) + " RPM");
+  Serial.print("Velocidad: ");
+  Serial.print(velocidad);
+  Serial.println(" RPM");
   return velocidad;
 }
 
@@ -208,15 +223,21 @@ int temperaturaTermistor() {
     return 0; // Valor por defecto en caso de error.
   }
   float R = tR1 * (1023.0 / lectura - 1.0); // Resistencia del termistor.
-  //Serial.println("Resistencia: " + String(R) + " ohms");
+  //Serial.print("Resistencia: ");
+  //Serial.print(R);
+  //Serial.println(" ohms");
   float T = 1.0 / (1.0 / tT0 + log(R / tR0) / tBeta); // Temperatura en Kelvin.
-  Serial.println("Temperatura: " + String(T - 273.15) + "°C");
+  Serial.print("Temperatura: ");
+  Serial.print(T - 273.15);
+  Serial.println("°C");
   return T - 273.15; // Temperatura en Celsius.
 }
 
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-  Serial.println("Velocidad: " + String(velocidad) + "%");
+  Serial.print("Velocidad: ");
+  Serial.print(velocidad);
+  Serial.println("%");
   analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
 }
 
