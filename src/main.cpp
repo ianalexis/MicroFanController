@@ -32,10 +32,10 @@ const float tR1 = 10000;  // Resistencia en serie (10K ohms). De referencia para
 //Variables Tacometro
 int velocidad = 0; // Velocidad actual del motor en RPM.
 int pulsos = 0; // Cantidad de pulsos detectados.
-const unsigned long tiempoMaxEspera = 200;    // Tiempo máximo de espera en milisegundos para calcular la velocidad.
-const unsigned long tiempoMaxEsperaPulso = 100; // Tiempo máximo de espera para cada pulso en milisegundos.
-unsigned long tiempoInicial = 0; // Tiempo inicial de la medición de pulsos.
-unsigned long tiempoMedido = 0; // Tiempo de medición de pulsos en milisegundos.
+const int tiempoMaxEspera = 200;    // Tiempo máximo de espera en milisegundos para calcular la velocidad.
+const int tiempoMaxEsperaPulso = 100; // Tiempo máximo de espera para cada pulso en milisegundos.
+int tiempoInicial = 0; // Tiempo inicial de la medición de pulsos.
+int tiempoMedido = 0; // Tiempo de medición de pulsos en milisegundos.
 
 
 
