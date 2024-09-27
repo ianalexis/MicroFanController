@@ -21,12 +21,23 @@ static const int pwmOff = 1;			  // Valor de PWM para apagar el motor.
 static const int pwmFreq = 25000;		  // Frecuencia de PWM en Hz. 25kHz segun Noctua WhitePaper.
 int pwmMin = 10;						  // Valor minimo de PWM (se setea en setPWMMin()).
 int pwm = 0;							  // Valor de PWM actual.
+// TODO: Valor de diferencia +/- para cambio de velocidad.
 
 // Variables de Termistor
 const float tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
 const float tR0 = 100000; // Valor de resistencia a 25 grados Celsius.
 const float tT0 = 298.15; // Temperatura de referencia en Kelvin.
 const float tR1 = 10000;  // Resistencia en serie (10K ohms). De referencia para el divisor de voltaje.
+
+//Variables Tacometro
+int velocidad = 0; // Velocidad actual del motor en RPM.
+int pulsos = 0; // Cantidad de pulsos detectados.
+const unsigned long tiempoMaxEspera = 200;    // Tiempo máximo de espera en milisegundos para calcular la velocidad.
+const unsigned long tiempoMaxEsperaPulso = 100; // Tiempo máximo de espera para cada pulso en milisegundos.
+unsigned long tiempoInicial = 0; // Tiempo inicial de la medición de pulsos.
+unsigned long tiempoMedido = 0; // Tiempo de medición de pulsos en milisegundos.
+
+
 
 // Estructura para almacenar pares de temperatura y porcentaje de PWM
 struct TempPWM {
@@ -196,22 +207,18 @@ void verificarTemperatura(int temperatura) {
 
 // Devuelve la velocidad actual del motor en RPM.
 int velocidadActual() {
-    unsigned long tiempoMaxEspera = 200;    // Tiempo máximo de espera en milisegundos para calcular la velocidad.
-    int pulsos = 0;                         // Cantidad de pulsos detectados.
-    unsigned long tiempoInicial = millis(); // Tiempo inicial.
-    unsigned long tiempoMaxEsperaPulso = 100; // Tiempo máximo de espera para cada pulso en milisegundos.
+    pulsos = 0;                         // Cantidad de pulsos detectados.
+    tiempoInicial = millis(); // Tiempo inicial.
 
     while (millis() - tiempoInicial < tiempoMaxEspera) { // Mientras no se cumpla el tiempo de espera.
         unsigned long tiempoInicioPulso = millis(); // Tiempo de inicio de la espera del pulso.
         bool pulsoDetectado = false;
-
         while (millis() - tiempoInicioPulso < tiempoMaxEsperaPulso) {
             if (digitalRead(pinTacometro) == LOW) { // Si detecta un pulso (borde de bajada).
                 pulsoDetectado = true;
                 break;
             }
         }
-
         if (pulsoDetectado) {
             pulsos++; // Incrementa la cantidad de pulsos.
             while (digitalRead(pinTacometro) == LOW) {
@@ -220,12 +227,9 @@ int velocidadActual() {
         }
         delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
     }
-
     // Calcula la velocidad en RPM.
     // RPM = (pulsos / tiempoMedidoEnSegundos) * 60 / 2
-    unsigned long tiempoMedido = millis() - tiempoInicial;
-    float tiempoMedidoEnSegundos = tiempoMedido / 1000.0;
-    int velocidad = (pulsos / tiempoMedidoEnSegundos) * 60 / 2;
+    velocidad = (pulsos / ((millis() - tiempoInicial) / 1000.0)) * 60 / 2;
 
     Serial.print("Velocidad: ");
     Serial.print(velocidad);
