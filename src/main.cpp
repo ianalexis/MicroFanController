@@ -6,14 +6,21 @@ static const int pinTacometro = D2;
 static const int pinTermistor = A0;
 
 // Variables globales
-static const int pwmMax = 100; // Valor maximo de PWM
-static const int porcentajeSinTacometro = 35; // Porcentaje de la velocidad minima para el caso de no tener sensor.
 static const int temperaturaMaximaEmergencia = 90; // Temperatura maxima de emergencia.
 static const int tiempoDeMuestreo = 5000; // Tiempo de espera en milisegundos entre lecturas de temperatura.
+int tempMin = 20; // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()). //TODO: Subir a 40 grados.
+bool tacometro = true; // Variable para saber si el tacometro esta funcionando.
+const int erroresVelocidadMax = 5; // Cantidad maxima de errores de velocidad.
+int erroresVelocidad = 0; // Cantidad de errores de velocidad.
+int temperatura = 0; // Temperatura actual.
+
+// Variables de control de velocidad
+static const int pwmMax = 100; // Valor maximo de PWM
+static const int pwmMinSinTacometro = 35; // Porcentaje de la velocidad minima para el caso de no tener sensor.
 static const int pwmOff = 1; // Valor de PWM para apagar el motor.
 int pwmMin = 10; // Valor minimo de PWM (se setea en setPWMMin()).
-int tempMin = 20; // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()).
-bool tacometro = true; // Variable para saber si el tacometro esta funcionando.
+int pwm = 0; // Valor de PWM actual.
+
 
 // Variables de Termistor
 const float tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
@@ -27,7 +34,7 @@ struct TempPWM {
   int porcentajePWM;
 };
 
-// Matriz de temperatura y porcentaje de PWM (constante)
+// Matriz de temperatura y porcentaje de PWM (constante) //TODO: Despues de la prueba, descomentar la tabla original y ajustarla para usar min y max.
 // const TempPWM tempPWMArray[] = {
 //  {35, 1},
 //  {40, 35},
@@ -62,6 +69,8 @@ bool enMovimiento();
 int temperaturaTermistor();
 int calcularPWM(int temperatura);
 int velocidadActual();
+void verificarTemperatura(int temperatura);
+void verificarVelocidad();
 
 void setup() {
   Serial.println("Iniciando sistema...");
@@ -85,10 +94,10 @@ void setmins() {
 void setPWMMin() {
   Serial.println("Seteando PWM minimo...");
   pwmMin = pwmDeArranque();
-  tacometro = pwmMin > 0;
-  if (pwmMin == 0) {
-    Serial.println("Error: No se detecto movimiento en el tacometro, se setea el PWM minimo en un " + String(porcentajeSinTacometro) + "%");
-    pwmMin = porcentajeSinTacometro;
+  tacometro = pwmMin > 0; // Si el PWM minimo es mayor a 0, el tacometro esta funcionando.
+  if (!tacometro) {
+    Serial.println("Error: No se detecto movimiento en el tacometro, se setea el PWM minimo en un " + String(pwmMinSinTacometro) + "%");
+    pwmMin = pwmMinSinTacometro;
   }
 }
 
@@ -104,12 +113,12 @@ void setTempMin() {
     }
   }
   tempMin = 10;
-  Serial.println("Temperatura minima no encontrada en la tabla, se setea en " + String(tempMin) + "°C");
+  Serial.println("Error en Tabla: Temperatura minima no encontrada en la tabla, se setea en " + String(tempMin) + "°C");
 }
 
 // Devuelve la velocidad minima en PWM recorriendo el rango PWM hasta detectar movimiento. Devuelve un 10% mas de la velocidad detectada y si no detecta movimiento, devuelve 0.
 int pwmDeArranque() {
-  for (int i = pwmMin; i < porcentajeSinTacometro; i++) { // Recorre el rango de PWM de 0 a el maximo.
+  for (int i = pwmMin; i < pwmMinSinTacometro; i++) { // Recorre el rango de PWM de 0 a el maximo.
     setVelocidadPWM(i); // Setea el valor de PWM.
     if (enMovimiento()) {
       Serial.println("Velocidad minima detectada: " + String(i + 2) + "%");
@@ -120,24 +129,15 @@ int pwmDeArranque() {
   return 0;
 }
 
-//--------------------------------------------------------------
+//------------------------------------------------------------------------------------------------------------------------------------------------
 
 void loop() {
-  int temperatura = temperaturaTermistor(); // Lee la temperatura del termistor.
-  if (temperatura >= temperaturaMaximaEmergencia) { // Si la temperatura supera la temperatura de emergencia, enciende el motor al maximo y prende un led de advertencia.
-    setVelocidadPWM(pwmMax); // Setea el valor de PWM.
-    digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED incorporado.
-    Serial.println("Advertencia: Temperatura de emergencia detectada. Encendiendo motor al maximo.");
-    delay(10000); // Delay de 10 segundos a maxima velocidad antes de la proxima lectura.
-    digitalWrite(LED_BUILTIN, LOW); // Apaga el LED incorporado.
-  } else {
-    int pwm = calcularPWM(temperatura); // Calcula el valor de PWM basado en la temperatura
-    setVelocidadPWM(pwm); // Setea el valor de PWM.
-    delay(tiempoDeMuestreo); // Espera para volver a leer la temperatura.
-  }
-  if (tacometro) {
-    velocidadActual(); // Muestra la velocidad actual del motor.
-  }
+  temperatura = temperaturaTermistor(); // Lee la temperatura del termistor.
+  verificarTemperatura(temperatura); // Verifica si la temperatura supera la temperatura de emergencia.
+  pwm = calcularPWM(temperatura); // Calcula el valor de PWM basado en la temperatura
+  setVelocidadPWM(pwm); // Setea el valor de PWM.
+  delay(tiempoDeMuestreo); // Espera para volver a leer la temperatura.
+  verificarVelocidad(); // Verifica si el motor esta en movimiento si el tacometro esta activo.
 }
 
 // Calcula el valor de PWM basado en la temperatura utilizando interpolación lineal
@@ -168,6 +168,17 @@ int calcularPWM(int temperatura) {
 bool enMovimiento() {
   Serial.println("Detectando movimiento...");
   return velocidadActual() > 0;
+}
+
+// Verifica si la temperatura supera la temperatura de emergencia.
+void verificarTemperatura(int temperatura) {
+  if (temperatura >= temperaturaMaximaEmergencia) {
+    setVelocidadPWM(pwmMax); // Setea el valor de PWM.
+    digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED incorporado.
+    Serial.println("Advertencia: Temperatura de emergencia detectada. Encendiendo motor al maximo.");
+    delay(10000); // Delay de 10 segundos a maxima velocidad antes de la proxima lectura.
+    digitalWrite(LED_BUILTIN, LOW); // Apaga el LED incorporado.
+  }
 }
 
 // Devuelve la velocidad actual del motor en RPM.
@@ -203,6 +214,32 @@ int temperaturaTermistor() {
 
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-  //Serial.println("Velocidad: " + String(velocidad) + "%");
+  Serial.println("Velocidad: " + String(velocidad) + "%");
   analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
+}
+
+void verificarVelocidad() {
+  if (tacometro && pwm > pwmMin && !enMovimiento()) {
+    erroresVelocidad++;
+    while (!enMovimiento() && erroresVelocidad < erroresVelocidadMax) {
+      setVelocidadPWM(pwmMax);
+      delay(1000);
+      if (enMovimiento()){
+        Serial.println("Motor encendido al 100%, recalibrando velocidad minima.");
+        pwmMin = pwmDeArranque();
+        setTempMin();
+        erroresVelocidad--;
+      }
+      erroresVelocidad++;
+    }
+    if (erroresVelocidad >= erroresVelocidadMax) {
+      Serial.println("Error: No se detecto movimiento en el tacometro.");
+      Serial.println("Apagando motor y reiniciando sistema.");
+      setVelocidadPWM(pwmOff);
+      delay(1000);
+      setVelocidadPWM(0);
+      delay(1000);
+      ESP.restart(); // Reinicia el sistema
+    }
+  }
 }
