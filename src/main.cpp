@@ -1,5 +1,5 @@
 #include <Arduino.h>
-
+// TODO: REVISAR QUE VARIABLES SE PUEDEN PASAR A UNASIGNED. SOLO EN CUENTAS QUE NUNCA PUEDA HABER UN NEGATIVO O UN INT PORQUE ES PEOR USAR UN UNSIGNED CON UN INT.
 // Pines de conexion
 static const int pinPWM = D1;		// Pin de control de velocidad del motor.
 static const int pinTacometro = D2; // Pin de lecturaTermistor del tacometro.
@@ -173,7 +173,7 @@ int calcularPWM(int temperatura) {
 	}
 
 	// Interpolación lineal
-	for (int i = 0; i < cantElementosArray - 1; i++) {
+	for (int i = 0; i < cantElementosArray - 1; i++) { // TODO: Revisar si se pueden mejorar las variables.
 		if (temperatura >= tempPWMArray[i].temperatura && temperatura <= tempPWMArray[i + 1].temperatura) {
 			int tempDiff = tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura;
 			int pwmDiff = tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM;
