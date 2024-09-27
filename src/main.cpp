@@ -18,6 +18,7 @@ int temperatura = 0; // Temperatura actual.
 static const int pwmMax = 100; // Valor maximo de PWM
 static const int pwmMinSinTacometro = 35; // Porcentaje de la velocidad minima para el caso de no tener sensor.
 static const int pwmOff = 1; // Valor de PWM para apagar el motor.
+static const int pwmFreq = 25000; // Frecuencia de PWM en Hz. 25kHz segun Noctua WhitePaper.
 int pwmMin = 10; // Valor minimo de PWM (se setea en setPWMMin()).
 int pwm = 0; // Valor de PWM actual.
 
@@ -53,7 +54,6 @@ struct TempPWM {
   {90, 100}
 }; // Tabla de prueba TODO: Borrar
 
-
 // Número de elementos en la matriz
 const int cantElementosArray = sizeof(tempPWMArray) / sizeof(tempPWMArray[0]);
 
@@ -72,6 +72,7 @@ int velocidadActual();
 void verificarTemperatura(int temperatura);
 void verificarVelocidad();
 
+// Inicializa el sistema
 void setup() {
   Serial.println("Iniciando sistema...");
   Serial.begin(9600);
@@ -79,11 +80,12 @@ void setup() {
   pinMode(LED_BUILTIN, OUTPUT); // Setea el pin del LED incorporado como salida.
   pinMode(pinPWM, OUTPUT); // Setea el pin 9 como salida.
   pinMode(pinTacometro, INPUT); // Setea el pin como entrada.
-  analogWriteFreq(25000); // Setea la frecuencia de PWM a 25kHz.
+  analogWriteFreq(pwmFreq); // Setea la frecuencia de PWM.
   setmins(); // Setea el valor de PWM minimo y la temperatura minima.
   Serial.println("Sistema iniciado correctamente.");
   }
 
+// Setea los valores minimos de PWM y temperatura.
 void setmins() {
   Serial.println("Seteando valores minimos...");
   setPWMMin();
@@ -218,6 +220,7 @@ void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se nec
   analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
 }
 
+// Verifica si el motor esta en movimiento si el tacometro esta activo.
 void verificarVelocidad() {
   if (tacometro && pwm > pwmMin && !enMovimiento()) {
     erroresVelocidad++;
