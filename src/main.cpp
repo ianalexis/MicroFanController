@@ -2,12 +2,12 @@
 
 // Pines de conexion
 static const int pinPWM = D1;		// Pin de control de velocidad del motor.
-static const int pinTacometro = D2; // Pin de lectura del tacometro.
-static const int pinTermistor = A0; // Pin de lectura del termistor.
+static const int pinTacometro = D2; // Pin de lecturaTermistor del tacometro.
+static const int pinTermistor = A0; // Pin de lecturaTermistor del termistor.
 
 // Variables globales
 static const int temperaturaMaximaEmergencia = 90; // Temperatura maxima de emergencia.
-static const int tiempoDeMuestreo = 5000;		   // Tiempo de espera en milisegundos entre lecturas de temperatura.
+static const int tiempoDeMuestreo = 5000;		   // Tiempo de espera en milisegundos entre lecturaTermistors de temperatura.
 int tempMin = 20;								   // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()). //TODO: Subir a 40 grados.
 bool tacometro = true;							   // Variable para saber si el tacometro esta funcionando.
 const int erroresVelocidadMax = 5;				   // Cantidad maxima de errores de velocidad.
@@ -28,6 +28,8 @@ const float tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100
 const float tR0 = 100000; // Valor de resistencia a 25 grados Celsius.
 const float tT0 = 298.15; // Temperatura de referencia en Kelvin.
 const float tR1 = 10000;  // Resistencia en serie (10K ohms). De referencia para el divisor de voltaje.
+const int kelvin = 273.15; // Valor de Kelvin para convertir a Celsius.
+float lecturaTermistor = 0; // Lectura del termistor.
 
 //Variables Tacometro
 int velocidad = 0; // Velocidad actual del motor en RPM.
@@ -200,7 +202,7 @@ void verificarTemperatura(int temperatura) {
 		setVelocidadPWM(pwmMax);		 // Setea el valor de PWM.
 		digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED incorporado.
 		Serial.println("Advertencia: Temperatura de emergencia detectada. Encendiendo motor al maximo.");
-		delay(10000);					// Delay de 10 segundos a maxima velocidad antes de la proxima lectura.
+		delay(10000);					// Delay de 10 segundos a maxima velocidad antes de la proxima lecturaTermistor.
 		digitalWrite(LED_BUILTIN, LOW); // Apaga el LED incorporado.
 	}
 }
@@ -239,20 +241,20 @@ int velocidadActual() {
 
 // Devuelve la temperatura del termistor.
 int temperaturaTermistor() {
-	float lectura = analogRead(pinTermistor); // Lectura del termistor.
-	if (lectura < 0 || lectura > 1023) { // Si la lectura esta fuera de rango, devuelve 0.
-		Serial.println("Error: Lectura del termistor fuera de rango");
+	lecturaTermistor = analogRead(pinTermistor); // lecturaTermistor del termistor.
+	if (lecturaTermistor < 0 || lecturaTermistor > 1023) { // Si la lecturaTermistor esta fuera de rango, devuelve 0.
+		Serial.println("Error: lecturaTermistor del termistor fuera de rango");
 		return 0; // Valor por defecto en caso de error.
 	}
-	float R = tR1 * (1023.0 / lectura - 1.0); // Resistencia del termistor.
+	//float R = (tR1 * (1023.0 / lecturaTermistor - 1.0)); // Resistencia del termistor.
 	// Serial.print("Resistencia: ");
 	// Serial.print(R);
 	// Serial.println(" ohms");
-	float T = 1.0 / (1.0 / tT0 + log(R / tR0) / tBeta); // Temperatura en Kelvin.
+	temperatura = (1.0 / (1.0 / tT0 + log((tR1 * (1023.0 / lecturaTermistor - 1.0)) / tR0) / tBeta)) - kelvin ; // Temperatura en Kelvin.
 	Serial.print("Temperatura: ");
-	Serial.print(T - 273.15);
+	Serial.print(temperatura);
 	Serial.println("°C");
-	return T - 273.15; // Temperatura en Celsius.
+	return temperatura; // Temperatura en Celsius.
 }
 
 // Setea la velocidad del motor en PWM.
