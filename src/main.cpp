@@ -17,12 +17,14 @@ int erroresVelocidad = 0;						   // Cantidad de errores de velocidad.
 int temperatura = 0;							   // Temperatura actual.
 
 // Variables de control de velocidad
-static const int pwmMax = 100;			  // Valor maximo de PWM
+static const int pwmMax = 100;     // Valor maximo de PWM
 static const int pwmMinSinTacometro = 40; // Porcentaje de la velocidad minima para el caso de no tener sensor.
-static const int pwmOff = 1;			  // Valor de PWM para apagar el motor.
-static const int pwmFreq = 25000;		  // Frecuencia de PWM en Hz. 25kHz segun Noctua WhitePaper.
-int pwmMin = 10;						  // Valor minimo de PWM (se setea en setPWMMin()).
-int pwm = 0;							  // Valor de PWM actual.
+static const int pwmOff = 1;     // Valor de PWM para apagar el motor.
+static const int pwmFreq = 25000;    // Frecuencia de PWM en Hz. 25kHz segun Noctua WhitePaper.
+//static const int pwmChannel = 0;    // Canal de PWM.
+//static const int pwmResolution = 8; // Resolución de PWM (8 bits).
+int pwmMin = 10;        // Valor minimo de PWM (se setea en setPWMMin()).
+int pwm = 0;         // Valor de PWM actual.						  // Valor de PWM actual.
 
 // Variables de Termistor
 const int tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
@@ -61,9 +63,8 @@ struct TempPWM {
 const TempPWM tempPWMArray[] = {
 	{20, 30},
 	{25, 35},
-	{60, 50},
-	{70, 65},
-	{80, 90},
+	{40, 50},
+	{70, 90},
 	{90, 100}}; // Tabla de prueba TODO: Borrar
 
 // Número de elementos en la matriz
@@ -92,8 +93,9 @@ void setup() {
 	Serial.println("Configurando pines...");
 	pinMode(LED_BUILTIN, OUTPUT); // Setea el pin del LED incorporado como salida.
 	pinMode(pinPWM, OUTPUT);	  // Setea el pin 9 como salida.
-	pinMode(pinTacometro, INPUT); // Setea el pin como entrada.
+	pinMode(pinTacometro, INPUT); // Setea el pin como entrada. //TODO: REVISAR SI SE PUEDE USAR INPUT_PULLUP.
 	analogWriteFreq(pwmFreq);	  // Setea la frecuencia de PWM.
+	//ledcSetup(pwmChannel, pwmFreq, pwmResolution);//setea resolucion del pwm
 	setmins();					  // Setea el valor de PWM minimo y la temperatura minima.
 	Serial.println("Sistema iniciado correctamente.");
 }
