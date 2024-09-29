@@ -158,8 +158,8 @@ void loop() {
 	verificarTemperatura(temperatura);	  // Verifica si la temperatura supera la temperatura de emergencia.
 	pwm = calcularPWM(temperatura);		  // Calcula el valor de PWM basado en la temperatura
 	setVelocidadPWM(pwm);				  // Setea el valor de PWM.
-	delay(tiempoDeMuestreo);			  // Espera para volver a leer la temperatura.
 	verificarVelocidad();				  // Verifica si el motor esta en movimiento si el tacometro esta activo.
+	delay(tiempoDeMuestreo);			  // Espera para volver a leer la temperatura.
 }
 
 // Calcula el valor de PWM basado en la temperatura utilizando interpolación lineal
