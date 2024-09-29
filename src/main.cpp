@@ -1,9 +1,11 @@
 #include <Arduino.h>
 // TODO: REVISAR QUE VARIABLES SE PUEDEN PASAR A UNASIGNED. SOLO EN CUENTAS QUE NUNCA PUEDA HABER UN NEGATIVO O UN INT PORQUE ES PEOR USAR UN UNSIGNED CON UN INT.
 // Pines de conexion
-static const int pinPWM = D1;		// Pin de control de velocidad del motor. // RMF: Cambiar a 18.
-static const int pinTacometro = D2; // Pin de lecturaTermistor del tacometro. // RMF: Cambiar a 4.
-static const int pinTermistor = A0; // Pin de lecturaTermistor del termistor. // RMF: Cambiar a 34.
+static const int pinPWM = PIN_PWM;         // Pin de control de velocidad del motor.
+static const int pinTacometro = PIN_TACOMETRO; // Pin de lectura del tacometro.
+static const int pinTermistor = PIN_TERMISTOR; // Pin de lectura del termistor.
+
+// Resto del código...
 
 // Variables globales
 static const int temperaturaMaximaEmergencia = 90; // Temperatura maxima de emergencia.
@@ -86,7 +88,7 @@ int leerTacometro();
 // Inicializa el sistema
 void setup() {
 	Serial.println("Iniciando sistema...");
-	Serial.begin(9600); // RMF Cambiar a 115200.
+	Serial.begin(BAUD_RATE); // Inicia la comunicación serial.
 	Serial.println("Configurando pines...");
 	pinMode(LED_BUILTIN, OUTPUT); // Setea el pin del LED incorporado como salida.
 	pinMode(pinPWM, OUTPUT);	  // Setea el pin 9 como salida.
@@ -129,7 +131,7 @@ void setTempMin() {
 			return;
 		}
 	}
-	tempMin = 10;
+	tempMin = 10; // Valor por defecto en caso de error.
 	Serial.print("Error en Tabla: Temperatura minima no encontrada en la tabla, se setea en ");
 	Serial.print(tempMin);
 	Serial.println("°C");
