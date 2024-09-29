@@ -174,7 +174,7 @@ int calcularPWM(int temperatura) {
 	}
 
 	// Interpolación lineal
-	for (int i = 0; i < cantElementosArray - 1; i++) { // TODO: Revisar si se pueden mejorar las variables.
+	for (int i = 0; i < cantElementosArray - 1; i++) {
 		if (temperatura >= tempPWMArray[i].temperatura && temperatura <= tempPWMArray[i + 1].temperatura) {
 			int tempDiff = tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura;
 			int pwmDiff = tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM;
@@ -229,6 +229,8 @@ int leerTacometro(){
         }
         delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
     }
+	Serial.print("Pulsos: ");
+	Serial.println(pulsos);
 	return pulsos;
 }
 
@@ -271,27 +273,30 @@ void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se nec
 
 // Verifica si el motor esta en movimiento si el tacometro esta activo.
 void verificarVelocidad() {
-	if (tacometro && pwm > pwmMin && !enMovimiento()) {
-		erroresVelocidad++;
-		while (!enMovimiento() && erroresVelocidad < erroresVelocidadMax) {
-			setVelocidadPWM(pwmMax);
-			delay(1000);
-			if (enMovimiento()) {
-				Serial.println("Motor encendido al 100%, recalibrando velocidad minima.");
-				pwmMin = pwmDeArranque();
-				setTempMin();
-				erroresVelocidad--;
-			}
+	if (tacometro){
+		velocidadActual();
+		if (tacometro && pwm > pwmMin && !enMovimiento()) {
 			erroresVelocidad++;
-		}
-		if (erroresVelocidad >= erroresVelocidadMax) {
-			Serial.println("Error: No se detecto movimiento en el tacometro.");
-			Serial.println("Apagando motor y reiniciando sistema.");
-			setVelocidadPWM(pwmOff);
-			delay(1000);
-			setVelocidadPWM(0);
-			delay(1000);
-			ESP.restart(); // Reinicia el sistema
+			while (!enMovimiento() && erroresVelocidad < erroresVelocidadMax) {
+				setVelocidadPWM(pwmMax);
+				delay(1000);
+				if (enMovimiento()) {
+					Serial.println("Motor encendido al 100%, recalibrando velocidad minima.");
+					pwmMin = pwmDeArranque();
+					setTempMin();
+					erroresVelocidad--;
+				}
+				erroresVelocidad++;
+			}
+			if (erroresVelocidad >= erroresVelocidadMax) {
+				Serial.println("Error: No se detecto movimiento en el tacometro.");
+				Serial.println("Apagando motor y reiniciando sistema.");
+				setVelocidadPWM(pwmOff);
+				delay(1000);
+				setVelocidadPWM(0);
+				delay(1000);
+				ESP.restart(); // Reinicia el sistema
+			}
 		}
 	}
 }
