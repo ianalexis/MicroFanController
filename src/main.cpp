@@ -82,6 +82,7 @@ int calcularPWM(int temperatura);
 int velocidadActual();
 void verificarTemperatura(int temperatura);
 void verificarVelocidad();
+int leerTacometro();
 
 // Inicializa el sistema
 void setup() {
