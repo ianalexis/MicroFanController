@@ -1,9 +1,9 @@
 #include <Arduino.h>
 // TODO: REVISAR QUE VARIABLES SE PUEDEN PASAR A UNASIGNED. SOLO EN CUENTAS QUE NUNCA PUEDA HABER UN NEGATIVO O UN INT PORQUE ES PEOR USAR UN UNSIGNED CON UN INT.
 // Pines de conexion
-static const int pinPWM = PIN_PWM;         // Pin de control de velocidad del motor.
-static const int pinTacometro = PIN_TACOMETRO; // Pin de lectura del tacometro.
-static const int pinTermistor = PIN_TERMISTOR; // Pin de lectura del termistor.
+static const unsigned int pinPWM = PIN_PWM;         // Pin de control de velocidad del motor.
+static const unsigned int pinTacometro = PIN_TACOMETRO; // Pin de lectura del tacometro.
+static const unsigned int pinTermistor = PIN_TERMISTOR; // Pin de lectura del termistor.
 
 // Resto del código...
 
