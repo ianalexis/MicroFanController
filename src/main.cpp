@@ -1,9 +1,9 @@
 #include <Arduino.h>
 // TODO: REVISAR QUE VARIABLES SE PUEDEN PASAR A UNASIGNED. SOLO EN CUENTAS QUE NUNCA PUEDA HABER UN NEGATIVO O UN INT PORQUE ES PEOR USAR UN UNSIGNED CON UN INT.
 // Pines de conexion
-static const int pinPWM = D1;		// Pin de control de velocidad del motor.
-static const int pinTacometro = D2; // Pin de lecturaTermistor del tacometro.
-static const int pinTermistor = A0; // Pin de lecturaTermistor del termistor.
+static const int pinPWM = D1;		// Pin de control de velocidad del motor. // RMF: Cambiar a 18.
+static const int pinTacometro = D2; // Pin de lecturaTermistor del tacometro. // RMF: Cambiar a 4.
+static const int pinTermistor = A0; // Pin de lecturaTermistor del termistor. // RMF: Cambiar a 34.
 
 // Variables globales
 static const int temperaturaMaximaEmergencia = 90; // Temperatura maxima de emergencia.
@@ -21,7 +21,6 @@ static const int pwmOff = 1;			  // Valor de PWM para apagar el motor.
 static const int pwmFreq = 25000;		  // Frecuencia de PWM en Hz. 25kHz segun Noctua WhitePaper.
 int pwmMin = 10;						  // Valor minimo de PWM (se setea en setPWMMin()).
 int pwm = 0;							  // Valor de PWM actual.
-// TODO: Valor de diferencia +/- para cambio de velocidad.
 
 // Variables de Termistor
 const int tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
@@ -156,14 +155,13 @@ int pwmDeArranque() {
 void loop() {
 	temperatura = temperaturaTermistor(); // Lee la temperatura del termistor.
 	verificarTemperatura(temperatura);	  // Verifica si la temperatura supera la temperatura de emergencia.
-	pwm = calcularPWM(temperatura);		  // Calcula el valor de PWM basado en la temperatura
-	setVelocidadPWM(pwm);				  // Setea el valor de PWM.
+	setVelocidadPWM(calcularPWM(temperatura));// Setea el valor de PWM.
 	verificarVelocidad();				  // Verifica si el motor esta en movimiento si el tacometro esta activo.
 	delay(tiempoDeMuestreo);			  // Espera para volver a leer la temperatura.
 }
 
 // Calcula el valor de PWM basado en la temperatura utilizando interpolación lineal
-int calcularPWM(int temperatura) {
+int calcularPWM(int temperatura) {// TODO: revisar que hace si el pwm calculado es menor al de arranque.
 	if (temperatura < tempMin) { // Si la temperatura es menor a la temperatura minima, devuelve el PWM minimo.
 		Serial.println("Temperatura menor a la minima, apagando motor.");
 		return pwmOff; // Apaga el motor si la temperatura es menor a la minima.
@@ -195,17 +193,6 @@ int calcularPWM(int temperatura) {
 bool enMovimiento() {
 	Serial.println("Detectando movimiento...");
 	return leerTacometro() > 2; // Devuelve si detecta movimiento en el tacometro.
-}
-
-// Verifica si la temperatura supera la temperatura de emergencia.
-void verificarTemperatura(int temperatura) {
-	if (temperatura >= temperaturaMaximaEmergencia) {
-		setVelocidadPWM(pwmMax);		 // Setea el valor de PWM.
-		digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED incorporado.
-		Serial.println("Advertencia: Temperatura de emergencia detectada. Encendiendo motor al maximo.");
-		delay(10000);					// Delay de 10 segundos a maxima velocidad antes de la proxima lecturaTermistor.
-		digitalWrite(LED_BUILTIN, LOW); // Apaga el LED incorporado.
-	}
 }
 
 int leerTacometro(){
@@ -265,10 +252,24 @@ int temperaturaTermistor() {
 
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-	Serial.print("Velocidad: ");
-	Serial.print(velocidad);
-	Serial.println("%");
-	analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
+	if (velocidad != pwm) {
+		Serial.print("Cambio velocidad a: ");
+		Serial.print(velocidad);
+		Serial.println("%");
+		pwm = velocidad;
+		analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
+	}
+}
+
+// Verifica si la temperatura supera la temperatura de emergencia.
+void verificarTemperatura(int temperatura) {
+	if (temperatura >= temperaturaMaximaEmergencia) {
+		setVelocidadPWM(pwmMax);		 // Setea el valor de PWM.
+		digitalWrite(LED_BUILTIN, HIGH); // Enciende el LED incorporado.
+		Serial.println("Advertencia: Temperatura de emergencia detectada. Encendiendo motor al maximo.");
+		delay(10000);					// Delay de 10 segundos a maxima velocidad antes de la proxima lecturaTermistor.
+		digitalWrite(LED_BUILTIN, LOW); // Apaga el LED incorporado.
+	}
 }
 
 // Verifica si el motor esta en movimiento si el tacometro esta activo.
