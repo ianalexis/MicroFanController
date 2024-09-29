@@ -193,7 +193,7 @@ int calcularPWM(int temperatura) {
 // Devuelve si detecta movimiento en el tacometro.
 bool enMovimiento() {
 	Serial.println("Detectando movimiento...");
-	return velocidadActual() > 0;
+	return leerTacometro() > 2; // Devuelve si detecta movimiento en el tacometro.
 }
 
 // Verifica si la temperatura supera la temperatura de emergencia.
@@ -207,9 +207,8 @@ void verificarTemperatura(int temperatura) {
 	}
 }
 
-// Devuelve la velocidad actual del motor en RPM.
-int velocidadActual() {
-    pulsos = 0;                         // Cantidad de pulsos detectados.
+int leerTacometro(){
+	pulsos = 0;                         // Cantidad de pulsos detectados.
     tiempoInicial = millis(); // Tiempo inicial.
 
     while (millis() - tiempoInicial < tiempoMaxEspera) { // Mientras no se cumpla el tiempo de espera.
@@ -229,10 +228,14 @@ int velocidadActual() {
         }
         delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
     }
+	return pulsos;
+}
+
+// Devuelve la velocidad actual del motor en RPM.
+int velocidadActual() {
     // Calcula la velocidad en RPM.
     // RPM = (pulsos / tiempoMedidoEnSegundos) * 60 / 2
-    velocidad = (pulsos / ((millis() - tiempoInicial) / 1000.0)) * 60 / 2;
-
+    velocidad = (leerTacometro() / ((millis() - tiempoInicial) / 1000.0)) * 60 / 2;
     Serial.print("Velocidad: ");
     Serial.print(velocidad);
     Serial.println(" RPM");
