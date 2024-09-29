@@ -86,7 +86,7 @@ int leerTacometro();
 // Inicializa el sistema
 void setup() {
 	Serial.println("Iniciando sistema...");
-	Serial.begin(9600);
+	Serial.begin(9600); // RMF Cambiar a 115200.
 	Serial.println("Configurando pines...");
 	pinMode(LED_BUILTIN, OUTPUT); // Setea el pin del LED incorporado como salida.
 	pinMode(pinPWM, OUTPUT);	  // Setea el pin 9 como salida.
