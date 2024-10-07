@@ -93,7 +93,7 @@ void setup() {
 	Serial.println("Configurando pines...");
 	pinMode(LED_BUILTIN, OUTPUT); // Setea el pin del LED incorporado como salida.
 	pinMode(pinPWM, OUTPUT);	  // Setea el pin 9 como salida.
-	pinMode(pinTacometro, INPUT_PULLUP); // Setea el pin como entrada. //TODO: REVISAR SI SE PUEDE USAR INPUT_PULLUP.
+	pinMode(pinTacometro, INPUT_PULLUP); // Setea el pin como entrada.
 	analogWriteFreq(pwmFreq);	  // Setea la frecuencia de PWM.
 	//ledcSetup(pwmChannel, pwmFreq, pwmResolution);//setea resolucion del pwm
 	setmins();					  // Setea el valor de PWM minimo y la temperatura minima.
