@@ -257,7 +257,7 @@ int temperaturaTermistor() {
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
 	if (velocidad != pwm) {
-		Serial.print("Cambio velocidad a: ");
+		Serial.print("Velocidad a: ");
 		Serial.print(velocidad);
 		Serial.println("%");
 		pwm = velocidad;
