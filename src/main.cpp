@@ -134,11 +134,11 @@ void setTempMin() {
 	tempMin = 0; // Valor por defecto en caso de error.
 	Serial.println("Calculando temperatura minima...");
 	for (int i = 0; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
-		if (tempPWMArray[i].porcentajePWM >= pwmMin) {
+		if (tempPWMArray[i].porcentajePWM <= pwmMin && tempPWMArray[i+1].temperatura > pwmMin) {
 			tempMin = tempPWMArray[i].temperatura +
-          				(pwmMin - tempPWMArray[i].porcentajePWM) *
-         				(tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura) /
-          				(tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM);
+					  (tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura) *
+					  (pwmMin - tempPWMArray[i].porcentajePWM) /
+					  (tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM);
 			break;
 		}
 	}
@@ -309,10 +309,12 @@ int temperaturaTermistor() {
 		Serial.println("Error: lecturaTermistor del termistor fuera de rango");
 		return 0; // Valor por defecto en caso de error.
 	}
-	//float R = (tR1 * (1023.0 / lecturaTermistor - 1.0)); // Resistencia del termistor.
-	// Serial.print("Resistencia: ");
-	// Serial.print(R);
-	// Serial.println(" ohms");
+	Serial.print("Lectura del termistor: ");
+	Serial.println(lecturaTermistor);
+	/* float R = (tR1 * (1023.0 / lecturaTermistor - 1.0)); // Resistencia del termistor.
+	 Serial.print("Resistencia: ");
+	 Serial.print(R);
+	 Serial.println(" ohms"); */
 	temperatura = (1.0 / (1.0 / tT0 + log((tR1 * (1023.0 / lecturaTermistor - 1.0)) / tR0) / tBeta)) - kelvin ; // Temperatura en Kelvin.
 	Serial.print("Temperatura: ");
 	Serial.print(temperatura);
