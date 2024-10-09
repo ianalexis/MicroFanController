@@ -18,12 +18,12 @@ int temperatura = 0;							   // Temperatura actual.
 
 // Variables de control de velocidad
 static const int pwmMax = 100;     // Valor maximo de PWM
-static const int pwmMinSinTacometro = 40; // Porcentaje de la velocidad minima para el caso de no tener sensor.
-static const int pwmOff = 1;     // Valor de PWM para apagar el motor.
+static const int pwmMinStandard = 40; // Porcentaje de velocidad minima compatible con multiples motores para casos de error (Sin tacometro o error en la deteccion de velocidad minima).
+int pwmOff = 0;     // Valor de PWM para apagar el motor.
 static const int pwmFreq = 20000;    // Frecuencia de PWM en Hz. Set 20kHz por Mosfer Target frequency: 25kHz, acceptable range 21kHz to 28kHz segun Noctua WhitePaper. TODO: Probar sin setear la frecuencia o usar 12.5kHz.
 //static const int pwmChannel = 0;    // Canal de PWM.
 //static const int pwmResolution = 8; // Resolución de PWM (8 bits).
-int pwmMin = 10;        // Valor minimo de PWM (se setea en setPWMMin()).
+int pwmMin = 10;        // Valor minimo de PWM (se setea en setPWMs()).
 int pwm = 0;         // Valor de PWM actual.						  // Valor de PWM actual.
 
 // Variables de Termistor
@@ -74,8 +74,9 @@ const int cantElementosArray = sizeof(tempPWMArray) / sizeof(tempPWMArray[0]);
 void setup();
 void loop();
 void setmins();
-void setPWMMin();
+void setPWMs();
 void setTempMin();
+int pwmDeApagado();
 int pwmDeArranque();
 void setVelocidadPWM(int velocidad);
 bool enMovimiento();
@@ -84,6 +85,7 @@ int calcularPWM(int temperatura);
 int velocidadActual();
 void verificarTemperatura(int temperatura);
 void verificarVelocidad();
+bool verificarTacometro();
 int leerTacometro();
 
 // Inicializa el sistema
@@ -96,6 +98,7 @@ void setup() {
 	pinMode(pinTacometro, INPUT_PULLUP); // Setea el pin como entrada.
 	analogWriteFreq(pwmFreq);	  // Setea la frecuencia de PWM.
 	//ledcSetup(pwmChannel, pwmFreq, pwmResolution);//setea resolucion del pwm
+	tacometro = verificarTacometro();		  // Verifica si el tacometro esta funcionando.
 	setmins();					  // Setea el valor de PWM minimo y la temperatura minima.
 	Serial.println("Sistema iniciado correctamente.");
 }
@@ -103,26 +106,28 @@ void setup() {
 // Setea los valores minimos de PWM y temperatura.
 void setmins() {
 	Serial.println("Seteando valores minimos...");
-	setPWMMin();
+	setPWMs();
 	setTempMin();
 }
 
 // Setea el valor de pwmMin con el valor de la velocidad minima del sensor y en caso de no existir o no funcionar el sensor, se setea en un 75% de la velocidad PWM.
-void setPWMMin() {
+void setPWMs() {
 	Serial.println("Seteando PWM minimo...");
-	pwmMin = pwmDeArranque();
-	tacometro = pwmMin > 0; // Si el PWM minimo es mayor a 0, el tacometro esta funcionando.
-	if (!tacometro) {
-		Serial.print("Error: No se detecto movimiento en el tacometro, se setea el PWM minimo en un ");
-		Serial.print(pwmMinSinTacometro);
-		Serial.println("%");
-		pwmMin = pwmMinSinTacometro;
+	if (tacometro) {
+		pwmOff = pwmDeApagado();
+		pwmMin = pwmDeArranque();
+	} else{
+		Serial.print("Error: No se detecto tacometro, se setea el PWM minimo en un ");
+		Serial.print(pwmMinStandard);
+		Serial.println("% y el PWM de apagado en 0%.");
+		pwmMin = pwmMinStandard;
+		pwmOff = 0;
 	}
 }
 
 // Setea el valor de tempMin con el valor de PWM minimo en base a la tabla de temperaturas y PWM para evitar enviar un PWM menor al minimo.
 void setTempMin() {
-	Serial.println("Seteando temperatura minima...");
+	Serial.println("Calculando temperatura minima...");
 	tempMin = tempPWMArray[0].temperatura; // Setea el valor de tempMin con el valor de la primera temperatura de la tabla.
 	for (int i = 0; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
 		if (tempPWMArray[i].porcentajePWM >= pwmMin) {// Si el porcentaje de PWM es mayor o igual al porcentaje minimo.
@@ -141,17 +146,73 @@ void setTempMin() {
 
 // Devuelve la velocidad minima en PWM recorriendo el rango PWM hasta detectar movimiento. Devuelve un 10% mas de la velocidad detectada y si no detecta movimiento, devuelve 0.
 int pwmDeArranque() {
-	for (int i = pwmMin; i < pwmMinSinTacometro; i++) {						// Recorre el rango de PWM de 0 a el maximo.
-		setVelocidadPWM(i); // Setea el valor de PWM.
-		if (enMovimiento()) {
-			Serial.print("Velocidad minima detectada: ");
-			Serial.print(i + 2);
-			Serial.println("%");
-			return static_cast<int>(i + 2);
-		}
+    Serial.println("Verificando velocidad minima...");
+    Serial.println("Apagando motor...");
+    unsigned long tiempoMax = millis() + 60000; // 1 minuto de espera maxima para detectar movimiento.
+    while (enMovimiento() && millis() < tiempoMax) {
+        setVelocidadPWM(pwmOff); // Apaga el motor.
+        delay(250);
+    }
+	if (enMovimiento()) {
+		Serial.println("Error: No se detecto apagado del motor.");
+		pwmOff = pwmMinStandard;
+		return pwmMinStandard;
 	}
-	Serial.println("Error: No se detecto movimiento en el tacometro.");
-	return 0;
+    for (int i = pwmOff; i < pwmMinStandard; i++) { // TODO: cambiar inicio a 0.
+        setVelocidadPWM(i); // Setea el valor de PWM.
+        delay(500); // Espera medio segundo.
+        if (enMovimiento()) {
+            Serial.print("Velocidad minima detectada: ");
+            Serial.print(i + 2);
+            Serial.println("%");
+            return (i + 2);
+        }
+    }
+    Serial.println("Error: No se detecto velocidad minima.");
+    return pwmMinStandard;
+}
+
+// Devuelve el valor de PWM para apagar el motor. Si no detecta movimiento, setea el PWM de apagado en 1% y si no detecta apagado, setea el PWM de apagado en 0%.
+int pwmDeApagado() {
+    Serial.println("Verificando señal PWM 0%...");
+    unsigned long tiempoMax = millis() + 60000; // 1 minuto de espera maxima para detectar apagado.
+    setVelocidadPWM(0);
+    delay(1000);
+    while (enMovimiento() && millis() < tiempoMax) {
+        Serial.println("Se detecta movimiento, seteando velocidad a 1%.");
+        setVelocidadPWM(1);
+        delay(1000);
+    }
+    if (enMovimiento()) {
+        Serial.println("Error: No se detecto apagado del motor.");
+        return 0;
+    } else {
+        Serial.println("Se detecta apagado del motor, reintentando velocidad 0%.");
+        setVelocidadPWM(0);
+        delay(1000);
+        if (enMovimiento()) {
+            Serial.println("Error: No se detecto apagado del motor.");
+            Serial.println("Se configura el PWM de apagado a 1%.");
+            return 1;
+        } else {
+            Serial.println("Se detecta apagado del motor, se setea el PWM de apagado en 0%.");
+            return 0;
+        }
+    }
+}
+
+bool verificarTacometro(){
+	Serial.println("Verificando tacometro...");
+	setVelocidadPWM(100);
+	delay(500);
+	if (enMovimiento()){
+		setVelocidadPWM(0); // Apaga el motor para prueba de pwmMin. TODO: Se puede eliminar.
+		Serial.println("Tacometro detectado.");
+		return true;
+	} else {
+		Serial.println("Error: No se detecto movimiento en el tacometro.");
+		return false;
+	}
 }
 
 //------------------------------------------------------------------------------------------------------------------------------------------------
