@@ -15,6 +15,8 @@ bool tacometro = true;							   // Variable para saber si el tacometro esta func
 const int erroresVelocidadMax = 5;				   // Cantidad maxima de errores de velocidad.
 int erroresVelocidad = 0;						   // Cantidad de errores de velocidad.
 int temperatura = 0;							   // Temperatura actual.
+int temperaturaAnterior = 0;					   // Temperatura anterior.
+static const int histeresisDeltaT = 3;				   // Histeresis de temperatura en grados Celsius.
 
 // Variables de control de velocidad
 static const int pwmMax = 100;     // Valor maximo de PWM
@@ -24,7 +26,7 @@ static const int pwmFreq = 20000;    // Frecuencia de PWM en Hz. Set 20kHz por M
 //static const int pwmChannel = 0;    // Canal de PWM.
 //static const int pwmResolution = 8; // Resolución de PWM (8 bits).
 int pwmMin = 10;        // Valor minimo de PWM (se setea en setPWMs()).
-int pwm = 0;         // Valor de PWM actual.						  // Valor de PWM actual.
+int pwmActual = 0;         // Valor de PWM actual.
 
 // Variables de Termistor
 const int tBeta = 4021; // Valor B del termistor. Intermedio entre NTC3950 100K y EPKOS 4092 100K.
@@ -61,6 +63,7 @@ struct TempPWM {
 //};
 
 const TempPWM tempPWMArray[] = {
+	{10,1},
 	{20, 30},
 	{25, 35},
 	{40, 50},
@@ -87,6 +90,7 @@ void verificarTemperatura(int temperatura);
 void verificarVelocidad();
 bool verificarTacometro();
 int leerTacometro();
+bool histeresis();
 
 // Inicializa el sistema
 void setup() {
@@ -129,13 +133,13 @@ void setPWMs() {
 void setTempMin() {
 	tempMin = 0; // Valor por defecto en caso de error.
 	Serial.println("Calculando temperatura minima...");
-	tempMin = tempPWMArray[0].temperatura; // Setea el valor de tempMin con el valor de la primera temperatura de la tabla.
 	for (int i = 0; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
 		if (tempPWMArray[i].porcentajePWM >= pwmMin) {
 			tempMin = tempPWMArray[i].temperatura +
           				(pwmMin - tempPWMArray[i].porcentajePWM) *
          				(tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura) /
           				(tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM);
+			break;
 		}
 	}
 	if (tempMin == 0) {
@@ -318,13 +322,19 @@ int temperaturaTermistor() {
 
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-	if (velocidad != pwm && velocidad >= pwmMin) {
+	if (velocidad != pwmActual && velocidad >= pwmMin && histeresis()) {
 		Serial.print("Velocidad a: ");
 		Serial.print(velocidad);
 		Serial.println("%");
-		pwm = velocidad;
+		pwmActual = velocidad;
 		analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
 	}
+}
+
+// Devuelve si la diferencia de temperatura supera la histeresis.
+bool histeresis(){
+	temperaturaAnterior = temperatura;
+	return (abs(temperatura - temperaturaAnterior) > histeresisDeltaT);
 }
 
 // Verifica si la temperatura supera la temperatura de emergencia.
@@ -342,7 +352,7 @@ void verificarTemperatura(int temperatura) {
 void verificarVelocidad() {
 	if (tacometro){
 		velocidadActual();
-		if (tacometro && pwm > pwmMin && !enMovimiento()) {
+		if (tacometro && pwmActual > pwmMin && !enMovimiento()) {
 			erroresVelocidad++;
 			while (!enMovimiento() && erroresVelocidad < erroresVelocidadMax) {
 				setVelocidadPWM(pwmMax);
