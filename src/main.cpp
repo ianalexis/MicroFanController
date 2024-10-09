@@ -52,7 +52,7 @@ struct TempPWM {
 	int porcentajePWM;
 };
 
-// Matriz de temperatura y porcentaje de PWM (constante) //TODO: Despues de la prueba, descomentar la tabla original y ajustarla para usar min y max.
+// Matriz de temperatura y porcentaje de PWM (constante). Columna porcentarjePWM siempre de 1 a 100. //TODO: Despues de la prueba, descomentar la tabla original y ajustarla para usar min y max.
 // const TempPWM tempPWMArray[] = {
 //  {35, 1},
 //  {40, 35},
@@ -63,7 +63,7 @@ struct TempPWM {
 //};
 
 const TempPWM tempPWMArray[] = {
-	{10,1},
+	{10, 1},
 	{20, 30},
 	{25, 35},
 	{40, 50},
@@ -265,8 +265,8 @@ bool enMovimiento() {
 	return leerTacometro() > 2; // Devuelve si detecta movimiento en el tacometro.
 }
 
-int leerTacometro(){
-	pulsos = 0;                         // Cantidad de pulsos detectados.
+int leerTacometro() { // TODO: Revisar porque mide siempre al menos 2 pulsos. Rearmar la funcion.
+    pulsos = 0;                         // Cantidad de pulsos detectados.
     tiempoInicial = millis(); // Tiempo inicial.
 
     while (millis() - tiempoInicial < tiempoMaxEspera) { // Mientras no se cumpla el tiempo de espera.
@@ -277,18 +277,25 @@ int leerTacometro(){
                 pulsoDetectado = true;
                 break;
             }
+            delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
         }
         if (pulsoDetectado) {
             pulsos++; // Incrementa la cantidad de pulsos.
+            unsigned long tiempoInicioPulsoTerminar = millis(); // Tiempo de inicio de la espera para que el pulso termine.
             while (digitalRead(pinTacometro) == LOW) {
                 // Espera a que el pulso termine.
+                if (millis() - tiempoInicioPulsoTerminar > tiempoMaxEsperaPulso) {
+                    // Si el pulso no termina en el tiempo esperado, salir del bucle.
+                    break;
+                }
+                delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
             }
         }
         delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
     }
-	Serial.print("Pulsos: ");
-	Serial.println(pulsos);
-	return pulsos;
+    Serial.print("Pulsos: ");
+    Serial.println(pulsos);
+    return pulsos;
 }
 
 // Devuelve la velocidad actual del motor en RPM.
