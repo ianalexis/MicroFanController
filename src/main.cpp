@@ -10,7 +10,7 @@ static const unsigned int pinTermistor = PIN_TERMISTOR; // Pin de lectura del te
 // Variables globales
 static const int temperaturaMaximaEmergencia = 90; // Temperatura maxima de emergencia.
 static const int tiempoDeMuestreo = 5000;		   // Tiempo de espera en milisegundos entre lecturaTermistors de temperatura.
-int tempMin = 20;								   // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()). //TODO: Subir a 40 grados.
+int tempMin = 0;								   // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()). //TODO: Subir a 40 grados.
 bool tacometro = true;							   // Variable para saber si el tacometro esta funcionando.
 const int erroresVelocidadMax = 5;				   // Cantidad maxima de errores de velocidad.
 int erroresVelocidad = 0;						   // Cantidad de errores de velocidad.
@@ -127,6 +127,7 @@ void setPWMs() {
 
 // Setea el valor de tempMin con el valor de PWM minimo en base a la tabla de temperaturas y PWM para evitar enviar un PWM menor al minimo.
 void setTempMin() {
+	tempMin = 0; // Valor por defecto en caso de error.
 	Serial.println("Calculando temperatura minima...");
 	tempMin = tempPWMArray[0].temperatura; // Setea el valor de tempMin con el valor de la primera temperatura de la tabla.
 	for (int i = 0; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
@@ -135,11 +136,13 @@ void setTempMin() {
           				(pwmMin - tempPWMArray[i].porcentajePWM) *
          				(tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura) /
           				(tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM);
-			return;
 		}
 	}
-	tempMin = 10; // Valor por defecto en caso de error.
-	Serial.print("Error en Tabla: Temperatura minima no encontrada en la tabla, se setea en ");
+	if (tempMin == 0) {
+		Serial.println("Error: No se encontro la temperatura minima.");
+		tempMin = 20; // Valor por defecto en caso de error.
+	}
+	Serial.print("Temperatura minima: ");
 	Serial.print(tempMin);
 	Serial.println("°C");
 }
@@ -235,7 +238,6 @@ int calcularPWM(int temperatura) {// TODO: revisar que hace si el pwm calculado 
 		Serial.println("Temperatura mayor a la maxima. Encendiendo motor al maximo.");
 		return pwmMax; // Enciende el motor al maximo si la temperatura es mayor a la maxima.
 	}
-
 	// Interpolación lineal
 	for (int i = 0; i < cantElementosArray - 1; i++) {
 		if (temperatura >= tempPWMArray[i].temperatura && temperatura <= tempPWMArray[i + 1].temperatura) {
@@ -249,9 +251,8 @@ int calcularPWM(int temperatura) {// TODO: revisar que hace si el pwm calculado 
 			return porcentajePWM;
 		}
 	}
-
 	Serial.println("Error: No se encontro el valor de PWM para la temperatura.");
-	return 0; // Valor por defecto en caso de error
+	return pwmMax; // Valor por defecto en caso de error
 }
 
 // Devuelve si detecta movimiento en el tacometro.
