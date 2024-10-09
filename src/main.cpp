@@ -148,7 +148,7 @@ void setTempMin() {
 int pwmDeArranque() {
     Serial.println("Verificando velocidad minima...");
     Serial.println("Apagando motor...");
-    unsigned long tiempoMax = millis() + 60000; // 1 minuto de espera maxima para detectar movimiento.
+    unsigned long tiempoMax = millis() + 35000; // 35s de espera maxima para detectar movimiento.
     while (enMovimiento() && millis() < tiempoMax) {
         setVelocidadPWM(pwmOff); // Apaga el motor.
         delay(250);
@@ -158,7 +158,7 @@ int pwmDeArranque() {
 		pwmOff = pwmMinStandard;
 		return pwmMinStandard;
 	}
-    for (int i = pwmOff; i < pwmMinStandard; i++) { // TODO: cambiar inicio a 0.
+    for (int i = pwmOff; i < pwmMinStandard; i++) {
         setVelocidadPWM(i); // Setea el valor de PWM.
         delay(500); // Espera medio segundo.
         if (enMovimiento()) {
@@ -175,7 +175,7 @@ int pwmDeArranque() {
 // Devuelve el valor de PWM para apagar el motor. Si no detecta movimiento, setea el PWM de apagado en 1% y si no detecta apagado, setea el PWM de apagado en 0%.
 int pwmDeApagado() {
     Serial.println("Verificando señal PWM 0%...");
-    unsigned long tiempoMax = millis() + 60000; // 1 minuto de espera maxima para detectar apagado.
+    unsigned long tiempoMax = millis() + 35000; // 35s de espera maxima para detectar apagado.
     setVelocidadPWM(0);
     delay(1000);
     while (enMovimiento() && millis() < tiempoMax) {
