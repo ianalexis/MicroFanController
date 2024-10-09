@@ -140,7 +140,7 @@ void setTempMin() {
 	}
 	if (tempMin == 0) {
 		Serial.println("Error: No se encontro la temperatura minima.");
-		tempMin = 20; // Valor por defecto en caso de error.
+		tempMin = tempPWMArray[0].temperatura;
 	}
 	Serial.print("Temperatura minima: ");
 	Serial.print(tempMin);
@@ -318,7 +318,7 @@ int temperaturaTermistor() {
 
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-	if (velocidad != pwm) {
+	if (velocidad != pwm && velocidad >= pwmMin) {
 		Serial.print("Velocidad a: ");
 		Serial.print(velocidad);
 		Serial.println("%");
