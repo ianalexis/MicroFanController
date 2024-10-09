@@ -130,11 +130,11 @@ void setTempMin() {
 	Serial.println("Calculando temperatura minima...");
 	tempMin = tempPWMArray[0].temperatura; // Setea el valor de tempMin con el valor de la primera temperatura de la tabla.
 	for (int i = 0; i < cantElementosArray; i++) { // Recorre la tabla de temperaturas y PWM.
-		if (tempPWMArray[i].porcentajePWM >= pwmMin) {// Si el porcentaje de PWM es mayor o igual al porcentaje minimo.
-			Serial.print("Temperatura minima: ");
-			Serial.print(tempPWMArray[i].temperatura);
-			Serial.println("°C");
-			tempMin = tempPWMArray[i].temperatura; // Setea el valor de tempMin con la temperatura de la tabla.
+		if (tempPWMArray[i].porcentajePWM >= pwmMin) {
+			tempMin = tempPWMArray[i].temperatura +
+          				(pwmMin - tempPWMArray[i].porcentajePWM) *
+         				(tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura) /
+          				(tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM);
 			return;
 		}
 	}
@@ -239,10 +239,10 @@ int calcularPWM(int temperatura) {// TODO: revisar que hace si el pwm calculado 
 	// Interpolación lineal
 	for (int i = 0; i < cantElementosArray - 1; i++) {
 		if (temperatura >= tempPWMArray[i].temperatura && temperatura <= tempPWMArray[i + 1].temperatura) {
-			int tempDiff = tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura;
-			int pwmDiff = tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM;
-			int tempOffset = temperatura - tempPWMArray[i].temperatura;
-			int porcentajePWM = tempPWMArray[i].porcentajePWM + (pwmDiff * tempOffset) / tempDiff;
+			int porcentajePWM = tempPWMArray[i].porcentajePWM +
+                   (tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM) *
+                   (temperatura - tempPWMArray[i].temperatura) /
+                   (tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura);
 			Serial.print("Porcentaje de PWM: ");
 			Serial.print(porcentajePWM);
 			Serial.println("%");
