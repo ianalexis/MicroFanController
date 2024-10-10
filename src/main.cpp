@@ -39,10 +39,8 @@ int lecturaTermistor = 0; // Lectura del termistor.
 //Variables Tacometro
 int velocidad = 0; // Velocidad actual del motor en RPM.
 int pulsos = 0; // Cantidad de pulsos detectados.
-const int tiempoMaxEspera = 200;    // Tiempo máximo de espera en milisegundos para calcular la velocidad.
-const int tiempoMaxEsperaPulso = 100; // Tiempo máximo de espera para cada pulso en milisegundos.
+const int tiempoMaxEspera = 250;    // Tiempo máximo de espera en milisegundos para calcular la velocidad.
 int tiempoInicial = 0; // Tiempo inicial de la medición de pulsos.
-int tiempoMedido = 0; // Tiempo de medición de pulsos en milisegundos.
 
 
 
@@ -265,33 +263,20 @@ bool enMovimiento() {
 	return leerTacometro() > 2; // Devuelve si detecta movimiento en el tacometro.
 }
 
-int leerTacometro() { // TODO: Revisar porque mide siempre al menos 2 pulsos. Rearmar la funcion.
+// Lee el tacometro y devuelve la cantidad de pulsos detectados.
+int leerTacometro() {
     pulsos = 0;                         // Cantidad de pulsos detectados.
-    tiempoInicial = millis(); // Tiempo inicial.
+    tiempoInicial = millis();           // Tiempo inicial.
 
-    while (millis() - tiempoInicial < tiempoMaxEspera) { // Mientras no se cumpla el tiempo de espera.
-        unsigned long tiempoInicioPulso = millis(); // Tiempo de inicio de la espera del pulso.
-        bool pulsoDetectado = false;
-        while (millis() - tiempoInicioPulso < tiempoMaxEsperaPulso) {
-            if (digitalRead(pinTacometro) == LOW) { // Si detecta un pulso (borde de bajada).
-                pulsoDetectado = true;
-                break;
-            }
-            delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
+    bool estadoAnterior = digitalRead(pinTacometro); // Estado anterior del pin del tacómetro.
+    bool estadoActual;
+
+    while (millis() - tiempoInicial < tiempoMaxEspera) {
+        estadoActual = digitalRead(pinTacometro); // Leer el estado actual del pin del tacómetro.
+        if (estadoActual != estadoAnterior) {     // Si hay un cambio en el estado.
+            pulsos++;                             // Incrementar el contador de pulsos.
+            estadoAnterior = estadoActual;        // Actualizar el estado anterior.
         }
-        if (pulsoDetectado) {
-            pulsos++; // Incrementa la cantidad de pulsos.
-            unsigned long tiempoInicioPulsoTerminar = millis(); // Tiempo de inicio de la espera para que el pulso termine.
-            while (digitalRead(pinTacometro) == LOW) {
-                // Espera a que el pulso termine.
-                if (millis() - tiempoInicioPulsoTerminar > tiempoMaxEsperaPulso) {
-                    // Si el pulso no termina en el tiempo esperado, salir del bucle.
-                    break;
-                }
-                delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
-            }
-        }
-        delay(1); // Agrega un pequeño retraso para evitar el WDT reset.
     }
     Serial.print("Pulsos: ");
     Serial.println(pulsos);
@@ -300,9 +285,7 @@ int leerTacometro() { // TODO: Revisar porque mide siempre al menos 2 pulsos. Re
 
 // Devuelve la velocidad actual del motor en RPM.
 int velocidadActual() {
-    // Calcula la velocidad en RPM.
-    // RPM = (pulsos / tiempoMedidoEnSegundos) * 60 / 2
-    velocidad = (leerTacometro() / ((millis() - tiempoInicial) / 1000.0)) * 60 / 2;
+    velocidad = (leerTacometro() / 4) * (60000 / tiempoMaxEspera); // TODO: Se divide por 4 porque aparentemente el tacometro tiene 4 pulsos por vuelta.
     Serial.print("Velocidad: ");
     Serial.print(velocidad);
     Serial.println(" RPM");
