@@ -25,7 +25,7 @@ int pwmOff = 0;     // Valor de PWM para apagar el motor.
 static const int pwmFreq = 20000;    // Frecuencia de PWM en Hz. Set 20kHz por Mosfer Target frequency: 25kHz, acceptable range 21kHz to 28kHz segun Noctua WhitePaper. TODO: Probar sin setear la frecuencia o usar 12.5kHz.
 //static const int pwmChannel = 0;    // Canal de PWM.
 //static const int pwmResolution = 8; // Resolución de PWM (8 bits).
-int pwmMin = 10;        // Valor minimo de PWM (se setea en setPWMs()).
+int pwmMin = 0;        // Valor minimo de PWM (se setea en setPWMs()).
 int pwmActual = 0;         // Valor de PWM actual.
 
 // Variables de Termistor
@@ -62,11 +62,10 @@ struct TempPWM {
 
 const TempPWM tempPWMArray[] = {
 	{10, 1},
-	{20, 30},
-	{25, 35},
-	{40, 50},
-	{70, 90},
-	{90, 100}}; // Tabla de prueba TODO: Borrar
+	{25, 10},
+	{30, 30},
+	{35, 55},
+	{40, 100}}; // Tabla de prueba TODO: Borrar
 
 // Número de elementos en la matriz
 const int cantElementosArray = sizeof(tempPWMArray) / sizeof(tempPWMArray[0]);
@@ -240,18 +239,26 @@ int calcularPWM(int temperatura) {// TODO: revisar que hace si el pwm calculado 
 		Serial.println("Temperatura mayor a la maxima. Encendiendo motor al maximo.");
 		return pwmMax; // Enciende el motor al maximo si la temperatura es mayor a la maxima.
 	}
-	// Interpolación lineal
-	for (int i = 0; i < cantElementosArray - 1; i++) {
-		if (temperatura >= tempPWMArray[i].temperatura && temperatura <= tempPWMArray[i + 1].temperatura) {
-			int porcentajePWM = tempPWMArray[i].porcentajePWM +
-                   (tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM) *
-                   (temperatura - tempPWMArray[i].temperatura) /
-                   (tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura);
-			Serial.print("Porcentaje de PWM: ");
-			Serial.print(porcentajePWM);
-			Serial.println("%");
-			return porcentajePWM;
+	if (histeresis()) {
+		Serial.println("Histeresis superada.");
+		// Interpolación lineal
+		for (int i = 0; i < cantElementosArray - 1; i++)
+		{
+			if (temperatura >= tempPWMArray[i].temperatura && temperatura <= tempPWMArray[i + 1].temperatura)
+			{
+				int porcentajePWM = tempPWMArray[i].porcentajePWM +
+									(tempPWMArray[i + 1].porcentajePWM - tempPWMArray[i].porcentajePWM) *
+										(temperatura - tempPWMArray[i].temperatura) /
+										(tempPWMArray[i + 1].temperatura - tempPWMArray[i].temperatura);
+				Serial.print("Porcentaje de PWM: ");
+				Serial.print(porcentajePWM);
+				Serial.println("%");
+				return porcentajePWM;
+			}
 		}
+	} else {
+		Serial.println("Histeresis no superada.");
+		return pwmActual;
 	}
 	Serial.println("Error: No se encontro el valor de PWM para la temperatura.");
 	return pwmMax; // Valor por defecto en caso de error
@@ -280,6 +287,10 @@ int leerTacometro() {
     }
     Serial.print("Pulsos: ");
     Serial.println(pulsos);
+    if (pulsos > 0 && (tiempoMaxEspera / pulsos) < 1.5) { // Elimina la lectura si la velocidad es mayor a aprox 10000 RPM.
+        Serial.println("Error de tacometro: Velocidad del motor muy alta.");
+        pulsos = 0;
+    }
     return pulsos;
 }
 
@@ -314,19 +325,20 @@ int temperaturaTermistor() {
 
 // Setea la velocidad del motor en PWM.
 void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-	if (velocidad != pwmActual && velocidad >= pwmMin && histeresis()) {
+	if (velocidad != pwmActual && velocidad >= pwmMin) {
 		Serial.print("Velocidad a: ");
 		Serial.print(velocidad);
 		Serial.println("%");
 		pwmActual = velocidad;
-		analogWrite(pinPWM, map(velocidad, 0, 100, 0, 255));
+		analogWrite(pinPWM, map(velocidad, 0, 100, 0, 1023));
 	}
 }
 
 // Devuelve si la diferencia de temperatura supera la histeresis.
 bool histeresis(){
+	bool result = abs(temperatura - temperaturaAnterior) > histeresisDeltaT;
 	temperaturaAnterior = temperatura;
-	return (abs(temperatura - temperaturaAnterior) > histeresisDeltaT);
+	return result;
 }
 
 // Verifica si la temperatura supera la temperatura de emergencia.
