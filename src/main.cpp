@@ -62,9 +62,9 @@ struct TempPWM {
 
 const TempPWM tempPWMArray[] = {
 	{10, 1},
-	{25, 10},
-	{30, 30},
-	{35, 55},
+	{20, 10},
+	{25, 30},
+	{30, 55},
 	{40, 100}}; // Tabla de prueba TODO: Borrar
 
 // Número de elementos en la matriz
@@ -102,6 +102,7 @@ void setup() {
 	tacometro = verificarTacometro();		  // Verifica si el tacometro esta funcionando.
 	setmins();					  // Setea el valor de PWM minimo y la temperatura minima.
 	Serial.println("Sistema iniciado correctamente.");
+	Serial.println("---------------------------------");
 }
 
 // Setea los valores minimos de PWM y temperatura.
@@ -181,7 +182,7 @@ int pwmDeArranque() {
 int pwmDeApagado() {
     Serial.println("Verificando señal PWM 0%...");
     setVelocidadPWM(0); // Intento de apagado a 0%.
-    delay(5000);
+    delay(30000);
     unsigned long tiempoMax = millis() + 35000; // 35s de espera maxima para detectar apagado.
 	Serial.println("Intentando 1%...");
     while (enMovimiento() && millis() < tiempoMax) { // Si detecta movimiento, se intenta apagar a 1%.
