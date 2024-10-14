@@ -159,8 +159,9 @@ int pwmDeArranque() {
     }
 	if (enMovimiento()) {
 		Serial.println("Error: No se detecto apagado del motor.");
-		pwmOff = pwmMinStandard;
-		return pwmMinStandard;
+		Serial.println("Se configura el PWM de apagado para calculo de curva completa a 0%.");
+		pwmOff = 0;
+		return 1;
 	}
     for (int i = pwmOff; i < pwmMinStandard; i++) {
         setVelocidadPWM(i); // Setea el valor de PWM.
@@ -179,27 +180,30 @@ int pwmDeArranque() {
 // Devuelve el valor de PWM para apagar el motor. Si no detecta movimiento, setea el PWM de apagado en 1% y si no detecta apagado, setea el PWM de apagado en 0%.
 int pwmDeApagado() {
     Serial.println("Verificando señal PWM 0%...");
+    setVelocidadPWM(0); // Intento de apagado a 0%.
+    delay(5000);
     unsigned long tiempoMax = millis() + 35000; // 35s de espera maxima para detectar apagado.
-    setVelocidadPWM(0);
-    delay(1000);
-    while (enMovimiento() && millis() < tiempoMax) {
-        Serial.println("Se detecta movimiento, seteando velocidad a 1%.");
+	Serial.println("Intentando 1%...");
+    while (enMovimiento() && millis() < tiempoMax) { // Si detecta movimiento, se intenta apagar a 1%.
+        Serial.println("Se detecta movimiento en 1%.");
         setVelocidadPWM(1);
         delay(1000);
     }
-    if (enMovimiento()) {
+    if (enMovimiento()) { // Si no detecta apagado a 1%, el ventilador posiblemente no se apague nunca.
         Serial.println("Error: No se detecto apagado del motor.");
+		Serial.println("Se configura el PWM de apagado a 0%.");
         return 0;
-    } else {
-        Serial.println("Se detecta apagado del motor, reintentando velocidad 0%.");
+    } else { // Si detecta apagado a 1%, se reintenta apagar a 0%.
+        Serial.println("Se detecta apagado del motor a 1%.");
+		Serial.println("Se reintenta a velocidad 0%.");
         setVelocidadPWM(0);
         delay(1000);
-        if (enMovimiento()) {
-            Serial.println("Error: No se detecto apagado del motor.");
+        if (enMovimiento()) { // El reintento de apagado a 0% falla. Se vuelve a 1% que si funciona.
+            Serial.println("No se apaga el motor a 0%.");
             Serial.println("Se configura el PWM de apagado a 1%.");
             return 1;
-        } else {
-            Serial.println("Se detecta apagado del motor, se setea el PWM de apagado en 0%.");
+        } else { // El reintento de apagado a 0% funciona, se setea el PWM de apagado a 0%.
+            Serial.println("Se detecta apagado del motor a 0%.");
             return 0;
         }
     }
