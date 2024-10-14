@@ -10,7 +10,7 @@ static const unsigned int pinTermistor = PIN_TERMISTOR; // Pin de lectura del te
 // Variables globales
 static const int temperaturaMaximaEmergencia = 90; // Temperatura maxima de emergencia.
 static const int tiempoDeMuestreo = 5000;		   // Tiempo de espera en milisegundos entre lecturaTermistors de temperatura.
-int tempMin = 0;								   // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()). //TODO: Subir a 40 grados.
+int tempMin = 0;								   // Temperatura minima en la curva segun velocidad minima(se setea en setTempMin()).
 bool tacometro = true;							   // Variable para saber si el tacometro esta funcionando.
 const int erroresVelocidadMax = 5;				   // Cantidad maxima de errores de velocidad.
 int erroresVelocidad = 0;						   // Cantidad de errores de velocidad.
@@ -210,7 +210,7 @@ bool verificarTacometro(){
 	setVelocidadPWM(100);
 	delay(500);
 	if (enMovimiento()){
-		setVelocidadPWM(0); // Apaga el motor para prueba de pwmMin. TODO: Se puede eliminar.
+		setVelocidadPWM(0); // Apaga el motor para prueba de pwmMin.
 		Serial.println("Tacometro detectado.");
 		return true;
 	} else {
@@ -230,7 +230,7 @@ void loop() {
 }
 
 // Calcula el valor de PWM basado en la temperatura utilizando interpolación lineal
-int calcularPWM(int temperatura) {// TODO: revisar que hace si el pwm calculado es menor al de arranque.
+int calcularPWM(int temperatura) { // Devuelve el valor de PWM basado en la temperatura.
 	if (temperatura < tempMin) { // Si la temperatura es menor a la temperatura minima, devuelve el PWM minimo.
 		Serial.println("Temperatura menor a la minima, apagando motor.");
 		return pwmOff; // Apaga el motor si la temperatura es menor a la minima.
