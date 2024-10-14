@@ -253,7 +253,7 @@ int calcularPWM(int temperatura) {// TODO: revisar que hace si el pwm calculado 
 				Serial.print("Porcentaje de PWM: ");
 				Serial.print(porcentajePWM);
 				Serial.println("%");
-				return porcentajePWM;
+				return porcentajePWM >= pwmMin ? porcentajePWM : pwmOff;
 			}
 		}
 	} else {
@@ -296,7 +296,7 @@ int leerTacometro() {
 
 // Devuelve la velocidad actual del motor en RPM.
 int velocidadActual() {
-    velocidad = (leerTacometro() / 4) * (60000 / tiempoMaxEspera); // TODO: Se divide por 4 porque aparentemente el tacometro tiene 4 pulsos por vuelta.
+    velocidad = (leerTacometro() / 4) * (60000 / tiempoMaxEspera); // Se divide por 4 porque aparentemente el tacometro tiene 4 pulsos por vuelta.
     Serial.print("Velocidad: ");
     Serial.print(velocidad);
     Serial.println(" RPM");
@@ -324,13 +324,13 @@ int temperaturaTermistor() {
 }
 
 // Setea la velocidad del motor en PWM.
-void setVelocidadPWM(int velocidad) { // TODO: REVISAR si es suficiente o se necesita otros cambios de frecuencia.
-	if (velocidad != pwmActual && velocidad >= pwmMin) {
+void setVelocidadPWM(int velocidad) {
+	if (velocidad != pwmActual) {
 		Serial.print("Velocidad a: ");
 		Serial.print(velocidad);
 		Serial.println("%");
-		pwmActual = velocidad;
-		analogWrite(pinPWM, map(velocidad, 0, 100, 0, 1023));
+		pwmActual = velocidad >= pwmMin ? velocidad : pwmOff;
+		analogWrite(pinPWM, map(pwmActual, 0, 100, 0, 1023)); // TODO: Revisar parametrizacion de profundidad de bits para el PWM.
 	}
 }
 
