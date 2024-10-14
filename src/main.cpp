@@ -21,10 +21,9 @@ static const int histeresisDeltaT = 3;				   // Histeresis de temperatura en gra
 // Variables de control de velocidad
 static const int pwmMax = 100;     // Valor maximo de PWM
 static const int pwmMinStandard = 40; // Porcentaje de velocidad minima compatible con multiples motores para casos de error (Sin tacometro o error en la deteccion de velocidad minima).
+static const int pwmBits = PWMBITS; // Resolucion de PWM en bits.
 int pwmOff = 0;     // Valor de PWM para apagar el motor.
-static const int pwmFreq = 20000;    // Frecuencia de PWM en Hz. Set 20kHz por Mosfer Target frequency: 25kHz, acceptable range 21kHz to 28kHz segun Noctua WhitePaper. TODO: Probar sin setear la frecuencia o usar 12.5kHz.
-//static const int pwmChannel = 0;    // Canal de PWM.
-//static const int pwmResolution = 8; // Resolución de PWM (8 bits).
+static const int pwmFreq = 25000;    // Frecuencia de PWM en Hz. Set 20kHz por Mosfer Target frequency: 25kHz, acceptable range 21kHz to 28kHz segun Noctua WhitePaper. TODO: Probar sin setear la frecuencia o usar 12.5kHz.
 int pwmMin = 0;        // Valor minimo de PWM (se setea en setPWMs()).
 int pwmActual = 0;         // Valor de PWM actual.
 
@@ -62,9 +61,9 @@ struct TempPWM {
 
 const TempPWM tempPWMArray[] = {
 	{10, 1},
-	{20, 10},
-	{25, 30},
-	{30, 55},
+	{20, 25},
+	{30, 30},
+	{35, 99},
 	{40, 100}}; // Tabla de prueba TODO: Borrar
 
 // Número de elementos en la matriz
@@ -228,6 +227,9 @@ bool verificarTacometro(){
 
 void loop() {
 	temperatura = temperaturaTermistor(); // Lee la temperatura del termistor.
+	Serial.print("PWM actual: ");
+	Serial.print(pwmActual);
+	Serial.println("%");
 	verificarTemperatura(temperatura);	  // Verifica si la temperatura supera la temperatura de emergencia.
 	setVelocidadPWM(calcularPWM(temperatura));// Setea el valor de PWM.
 	verificarVelocidad();				  // Verifica si el motor esta en movimiento si el tacometro esta activo.
@@ -313,10 +315,10 @@ int temperaturaTermistor() {
 	lecturaTermistor = analogRead(pinTermistor); // lecturaTermistor del termistor.
 	if (lecturaTermistor < 0 || lecturaTermistor > 1023) { // Si la lecturaTermistor esta fuera de rango, devuelve 0.
 		Serial.println("Error: lecturaTermistor del termistor fuera de rango");
-		return 0; // Valor por defecto en caso de error.
+		return temperaturaMaximaEmergencia; // Valor por defecto en caso de error.
 	}
-	Serial.print("Lectura del termistor: ");
-	Serial.println(lecturaTermistor);
+/* 	Serial.print("Lectura del termistor: ");
+	Serial.println(lecturaTermistor); */
 	/* float R = (tR1 * (1023.0 / lecturaTermistor - 1.0)); // Resistencia del termistor.
 	 Serial.print("Resistencia: ");
 	 Serial.print(R);
@@ -335,15 +337,17 @@ void setVelocidadPWM(int velocidad) {
 		Serial.print(velocidad);
 		Serial.println("%");
 		pwmActual = velocidad >= pwmMin ? velocidad : pwmOff;
-		analogWrite(pinPWM, map(pwmActual, 0, 100, 0, 1023)); // TODO: Revisar parametrizacion de profundidad de bits para el PWM.
+		analogWrite(pinPWM, map(velocidad, 0, 100, 0, pwmBits));
 	}
 }
 
 // Devuelve si la diferencia de temperatura supera la histeresis.
 bool histeresis(){
-	bool result = abs(temperatura - temperaturaAnterior) > histeresisDeltaT;
-	temperaturaAnterior = temperatura;
-	return result;
+	if (abs(temperatura - temperaturaAnterior) > histeresisDeltaT){
+		temperaturaAnterior = temperatura;
+		return true;
+	}
+	return false;
 }
 
 // Verifica si la temperatura supera la temperatura de emergencia.
